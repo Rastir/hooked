@@ -1,7 +1,6 @@
 package com.flaco.hooked.domain.usuario;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.flaco.hooked.domain.post.Post;
 import jakarta.persistence.*;
 import java.util.ArrayList;
@@ -20,6 +19,7 @@ public class Usuario {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false)
     private String contrasena;
 
