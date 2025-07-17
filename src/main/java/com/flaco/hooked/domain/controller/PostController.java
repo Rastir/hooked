@@ -2,7 +2,7 @@ package com.flaco.hooked.domain.controller;
 
 import com.flaco.hooked.domain.categoria.Categoria;
 import com.flaco.hooked.domain.categoria.CategoriaRepository;
-import com.flaco.hooked.domain.post.CrearPostRequest;
+import com.flaco.hooked.domain.request.CrearPostRequest;
 import com.flaco.hooked.domain.post.Post;
 import com.flaco.hooked.domain.post.PostRepository;
 import com.flaco.hooked.domain.usuario.Usuario;

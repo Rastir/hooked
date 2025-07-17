@@ -1,4 +1,4 @@
-package com.flaco.hooked.domain.categoria;
+package com.flaco.hooked.domain.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

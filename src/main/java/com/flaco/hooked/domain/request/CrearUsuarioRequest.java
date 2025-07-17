@@ -1,4 +1,4 @@
-package com.flaco.hooked.domain.usuario;
+package com.flaco.hooked.domain.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

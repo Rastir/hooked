@@ -2,7 +2,7 @@ package com.flaco.hooked.domain.controller;
 
 import com.flaco.hooked.domain.categoria.Categoria;
 import com.flaco.hooked.domain.categoria.CategoriaRepository;
-import com.flaco.hooked.domain.categoria.CrearCategoriaRequest;
+import com.flaco.hooked.domain.request.CrearCategoriaRequest;
 import com.flaco.hooked.domain.post.Post;
 import com.flaco.hooked.domain.post.PostRepository;
 import jakarta.validation.Valid;
@@ -16,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categorias")
 public class CategoriaController {
+
 
     @Autowired
     private CategoriaRepository categoriaRepository;
@@ -66,4 +67,5 @@ public class CategoriaController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
 }
