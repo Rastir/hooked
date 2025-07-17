@@ -1,17 +1,16 @@
 package com.flaco.hooked.domain.controller;
 
 import com.flaco.hooked.domain.service.UsuarioService;
-import com.flaco.hooked.domain.usuario.CrearUsuarioRequest;
+import com.flaco.hooked.domain.request.CrearUsuarioRequest;
 import com.flaco.hooked.domain.usuario.Usuario;
-import com.flaco.hooked.domain.usuario.UsuarioRepository;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -20,6 +19,13 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    // NUEVO ENDPOINT - Listar todos los usuarios
+    @GetMapping
+    public ResponseEntity<List<Usuario>> listarUsuarios() {
+        List<Usuario> usuarios = usuarioService.listarTodos();
+        return ResponseEntity.ok(usuarios);
+    }
 
     @PostMapping
     public ResponseEntity<?> crearUsuario(@Valid @RequestBody CrearUsuarioRequest request,
@@ -42,7 +48,8 @@ public class UsuarioController {
             return ResponseEntity.badRequest().body(error);
         }
     }
-     @GetMapping("/{email}")
+
+    @GetMapping("/{email}")
     public ResponseEntity<Usuario> obtenerUsuarioPorEmail(@PathVariable String email){
         try {
             Usuario usuario = usuarioService.buscarPorEmail(email);
@@ -50,6 +57,5 @@ public class UsuarioController {
         }catch (RuntimeException e){
             return ResponseEntity.notFound().build();
         }
-     }
-
+    }
 }
