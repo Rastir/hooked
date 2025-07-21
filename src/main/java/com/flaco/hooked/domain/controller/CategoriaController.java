@@ -1,8 +1,9 @@
 package com.flaco.hooked.domain.controller;
 
-import com.flaco.hooked.domain.categoria.Categoria;
-import com.flaco.hooked.domain.categoria.CategoriaRepository;
+import com.flaco.hooked.domain.service.CategoriaService;
+import com.flaco.hooked.domain.request.ActualizarCategoriaRequest;
 import com.flaco.hooked.domain.request.CrearCategoriaRequest;
+import com.flaco.hooked.domain.response.CategoriaResponse;
 import com.flaco.hooked.domain.post.Post;
 import com.flaco.hooked.domain.post.PostRepository;
 import jakarta.validation.Valid;
@@ -17,43 +18,70 @@ import java.util.List;
 @RequestMapping("/api/categorias")
 public class CategoriaController {
 
-
     @Autowired
-    private CategoriaRepository categoriaRepository;
+    private CategoriaService categoriaService;
 
     @Autowired
     private PostRepository postRepository;
 
+    //Crear categoría (CREATE)
     @PostMapping
-    public ResponseEntity<?> crearCategoria(@Valid @RequestBody CrearCategoriaRequest request){
-
-        //Verificar si ya existe una categoria con ese nombre
-        if (categoriaRepository.existsByNombre(request.getNombre())) {
-            return ResponseEntity.badRequest()
-                    .body("Ya existe una categoría con ese nombre");
+    public ResponseEntity<?> crearCategoria(@Valid @RequestBody CrearCategoriaRequest request) {
+        try {
+            CategoriaResponse categoria = categoriaService.crearCategoria(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(categoria);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        //Crea la categoría
-        Categoria categoria = new Categoria();
-        categoria.setNombre(request.getNombre());
-        categoria.setDescripcion(request.getDescripcion());
-
-        Categoria categoriaGuardada = categoriaRepository.save(categoria);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(categoriaGuardada);
     }
 
+    //Traer categorías (READ)
     @GetMapping
-    public List<Categoria> obtenerTodasLasCategorias(){
-        return categoriaRepository.findAll();
+    public ResponseEntity<List<CategoriaResponse>> obtenerTodasLasCategorias() {
+        List<CategoriaResponse> categorias = categoriaService.obtenerTodasLasCategorias();
+        return ResponseEntity.ok(categorias);
     }
 
-    @GetMapping("/{id}/posts")
-    public ResponseEntity<?> obtenerPostsPorCategoria(@PathVariable Long id){
-        Categoria categoria = categoriaRepository.findById(id)
-                .orElse(null);
+    //Traer categoría por ID (READ)
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerCategoriaPorId(@PathVariable Long id) {
+        try {
+            CategoriaResponse categoria = categoriaService.obtenerCategoriaPorId(id);
+            return ResponseEntity.ok(categoria);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
-        if (categoria == null){
+    //Actualizar categoría (UPDATE)
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarCategoria(
+            @PathVariable Long id,
+            @Valid @RequestBody ActualizarCategoriaRequest request) {
+        try {
+            CategoriaResponse categoria = categoriaService.actualizarCategoria(id, request);
+            return ResponseEntity.ok(categoria);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    //Borrar categoría(DELETE)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarCategoria(@PathVariable Long id) {
+        try {
+            categoriaService.eliminarCategoria(id);
+            return ResponseEntity.ok("Categoría eliminada exitosamente");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    //Traer categorías por ID (READ)
+    @GetMapping("/{id}/posts")
+    public ResponseEntity<?> obtenerPostsPorCategoria(@PathVariable Long id) {
+        // Verificar que la categoría existe usando el service
+        if (!categoriaService.existeCategoria(id)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -61,13 +89,17 @@ public class CategoriaController {
         return ResponseEntity.ok(posts);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerCategoriaPorId(@PathVariable Long id){
-        return categoriaRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    //Buscar categorias por nombre (READ)
+    @GetMapping("/buscar")
+    public ResponseEntity<List<CategoriaResponse>> buscarCategorias(@RequestParam String nombre) {
+        List<CategoriaResponse> categorias = categoriaService.buscarPorNombre(nombre);
+        return ResponseEntity.ok(categorias);
     }
 
-
-
+    //Datos estadisticos
+    @GetMapping("/stats")
+    public ResponseEntity<?> obtenerEstadisticas() {
+        long totalCategorias = categoriaService.contarCategorias();
+        return ResponseEntity.ok("Total de categorías: " + totalCategorias);
+    }
 }
