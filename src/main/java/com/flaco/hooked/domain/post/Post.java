@@ -1,21 +1,14 @@
 package com.flaco.hooked.domain.post;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flaco.hooked.domain.categoria.Categoria;
 import com.flaco.hooked.domain.usuario.Usuario;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
-import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "posts")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(of = "id")
 public class Post {
 
     @Id
@@ -24,90 +17,138 @@ public class Post {
 
     @Column(nullable = false)
     private String titulo;
+
     @Column(columnDefinition = "TEXT")
     private String contenido;
+
     private String fotoLink;
+
     @Column(nullable = false)
     private LocalDateTime fechaCreacion;
+
     private Integer likeCount = 0;
 
-    //Esta es la relación de quien crea el post
+    // Relación de quien crea el post
     @ManyToOne
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
-    //Relación con categoria, momentaneamente una sola
+    // Relación con categoria
     @ManyToOne
     @JoinColumn(name = "categoria_id", nullable = false)
     @JsonBackReference
     private Categoria categoria;
 
-    @PrePersist
-    public void prePersist(){
-        fechaCreacion = LocalDateTime.now();
+    //CONSTRUCTORES
+    public Post() {
     }
 
+    public Post(Long id, String titulo, String contenido, String fotoLink,
+                LocalDateTime fechaCreacion, Integer likeCount, Usuario usuario, Categoria categoria) {
+        this.id = id;
+        this.titulo = titulo;
+        this.contenido = contenido;
+        this.fotoLink = fotoLink;
+        this.fechaCreacion = fechaCreacion;
+        this.likeCount = likeCount != null ? likeCount : 0;
+        this.usuario = usuario;
+        this.categoria = categoria;
+    }
+
+    @PrePersist
+    public void prePersist() {
+        fechaCreacion = LocalDateTime.now();
+        if (likeCount == null) {
+            likeCount = 0;
+        }
+    }
+
+    //GETTERS
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public String getTitulo() {
         return titulo;
     }
 
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
-
     public String getContenido() {
         return contenido;
-    }
-
-    public void setContenido(String contenido) {
-        this.contenido = contenido;
     }
 
     public String getFotoLink() {
         return fotoLink;
     }
 
-    public void setFotoLink(String fotoLink) {
-        this.fotoLink = fotoLink;
-    }
-
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
     }
 
     public Integer getLikeCount() {
         return likeCount;
     }
 
-    public void setLikeCount(Integer likeCount) {
-        this.likeCount = likeCount;
-    }
-
     public Usuario getUsuario() {
         return usuario;
-    }
-
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
     }
 
     public Categoria getCategoria() {
         return categoria;
     }
 
+    //SETTERS
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setTitulo(String titulo) {
+        this.titulo = titulo;
+    }
+
+    public void setContenido(String contenido) {
+        this.contenido = contenido;
+    }
+
+    public void setFotoLink(String fotoLink) {
+        this.fotoLink = fotoLink;
+    }
+
+    public void setFechaCreacion(LocalDateTime fechaCreacion) {
+        this.fechaCreacion = fechaCreacion;
+    }
+
+    public void setLikeCount(Integer likeCount) {
+        this.likeCount = likeCount;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
+    }
+
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
+    }
+
+    // Metodos de like
+    public void incrementarLikes() {
+        this.likeCount = (this.likeCount != null ? this.likeCount : 0) + 1;
+    }
+
+    public void decrementarLikes() {
+        this.likeCount = Math.max(0, (this.likeCount != null ? this.likeCount : 0) - 1);
+    }
+
+    // EQUALS Y HASHCODE (ID)
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Post post = (Post) o;
+        return id != null && id.equals(post.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }
