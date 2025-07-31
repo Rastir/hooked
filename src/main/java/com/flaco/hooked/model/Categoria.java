@@ -1,8 +1,7 @@
-package com.flaco.hooked.domain.categoria;
+package com.flaco.hooked.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.flaco.hooked.domain.post.Post;
+import com.flaco.hooked.model.Post;
 import jakarta.persistence.*;
 import lombok.*;
 

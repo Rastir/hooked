@@ -1,7 +1,7 @@
 package com.flaco.hooked.domain.service;
 
-import com.flaco.hooked.domain.usuario.Usuario;
-import com.flaco.hooked.domain.usuario.UsuarioRepository;
+import com.flaco.hooked.model.Usuario;
+import com.flaco.hooked.domain.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

@@ -1,11 +1,13 @@
 package com.flaco.hooked.domain.response;
 
+import com.flaco.hooked.model.Usuario;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class UsuarioResponse {
 
-    // ✅ DATOS BÁSICOS (seguros)
+    //DATOS BÁSICOS (seguros)
     private Long id;
     private String nombre;
     private String email;
@@ -48,6 +50,26 @@ public class UsuarioResponse {
         this.ultimaActividad = ultimaActividad;
         this.nivelPescador = nivelPescador;
     }
+
+    // CONSTRUCTOR DESDE ENTIDAD
+    public UsuarioResponse(Usuario usuario) {
+        this.id = usuario.getId();
+        this.nombre = usuario.getNombre();
+        this.email = usuario.getEmail();
+        this.fechaRegistro = usuario.getFechaRegistro();
+        this.fotoPerfil = usuario.getFotoPerfil();
+        this.bio = usuario.getBio();
+        this.tags = usuario.getTags();
+        this.ubicacionPreferida = usuario.getUbicacionPreferida();
+        this.ultimaActividad = usuario.getUltimaActividad();
+        this.nivelPescador = usuario.getNivelPescador();
+
+        // Estadísticas se dejan null para este constructor
+        this.totalPosts = null;
+        this.totalLikes = null;
+        this.totalComentarios = null;
+    }
+
 
     // GETTERS
     public Long getId() {

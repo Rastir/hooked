@@ -5,7 +5,7 @@ import com.flaco.hooked.domain.request.LoginRequest;
 import com.flaco.hooked.domain.response.LoginResponse;
 import com.flaco.hooked.domain.service.JwtService;
 import com.flaco.hooked.domain.service.UsuarioService;
-import com.flaco.hooked.domain.usuario.Usuario;
+import com.flaco.hooked.model.Usuario;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

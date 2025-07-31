@@ -1,7 +1,6 @@
-package com.flaco.hooked.domain.usuario;
+package com.flaco.hooked.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.flaco.hooked.domain.post.Post;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

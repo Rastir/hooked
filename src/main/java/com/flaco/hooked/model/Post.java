@@ -1,11 +1,11 @@
-package com.flaco.hooked.domain.post;
+package com.flaco.hooked.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.flaco.hooked.domain.categoria.Categoria;
-import com.flaco.hooked.domain.usuario.Usuario;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -39,20 +39,24 @@ public class Post {
     @JsonBackReference
     private Categoria categoria;
 
+    // Relación con los comentarios del post
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Comentario> comentarios = new ArrayList<>();
+
     //CONSTRUCTORES
     public Post() {
     }
 
-    public Post(Long id, String titulo, String contenido, String fotoLink,
-                LocalDateTime fechaCreacion, Integer likeCount, Usuario usuario, Categoria categoria) {
+    public Post(Long id, String titulo, String contenido, String fotoLink, LocalDateTime fechaCreacion, Integer likeCount, Usuario usuario, Categoria categoria, List<Comentario> comentarios) {
         this.id = id;
         this.titulo = titulo;
         this.contenido = contenido;
         this.fotoLink = fotoLink;
         this.fechaCreacion = fechaCreacion;
-        this.likeCount = likeCount != null ? likeCount : 0;
+        this.likeCount = likeCount;
         this.usuario = usuario;
         this.categoria = categoria;
+        this.comentarios = comentarios;
     }
 
     @PrePersist
@@ -95,6 +99,9 @@ public class Post {
     public Categoria getCategoria() {
         return categoria;
     }
+    public List<Comentario> getComentarios() {
+        return comentarios;
+    }
 
     //SETTERS
     public void setId(Long id) {
@@ -128,6 +135,9 @@ public class Post {
     public void setCategoria(Categoria categoria) {
         this.categoria = categoria;
     }
+    public void setComentarios(List<Comentario> comentarios) {
+        this.comentarios = comentarios;
+    }
 
     // Metodos de like
     public void incrementarLikes() {
@@ -137,6 +147,20 @@ public class Post {
     public void decrementarLikes() {
         this.likeCount = Math.max(0, (this.likeCount != null ? this.likeCount : 0) - 1);
     }
+
+    // Método helper para agregar comentario
+    public void agregarComentario(Comentario comentario) {
+        comentarios.add(comentario);
+        comentario.setPost(this);
+    }
+
+    // Método helper para remover comentario
+    public void removerComentario(Comentario comentario) {
+        comentarios.remove(comentario);
+        comentario.setPost(null);
+    }
+
+
 
     // EQUALS Y HASHCODE (ID)
     @Override
