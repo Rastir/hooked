@@ -1,5 +1,6 @@
-package com.flaco.hooked.domain.like;
+package com.flaco.hooked.domain.repository;
 
+import com.flaco.hooked.model.Like;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

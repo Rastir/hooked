@@ -1,0 +1,20 @@
+package com.flaco.hooked.domain.request;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
+public class ActualizarComentarioRequest {
+
+    @NotBlank(message = "El contenido no puede estar vacío")
+    @Size(min = 1, max = 1000, message = "El contenido debe tener entre 1 y 1000 caracteres")
+    private String contenido;
+
+    public ActualizarComentarioRequest() {}
+
+    public ActualizarComentarioRequest(String contenido) {
+        this.contenido = contenido;
+    }
+
+    public String getContenido() { return contenido; }
+    public void setContenido(String contenido) { this.contenido = contenido; }
+}

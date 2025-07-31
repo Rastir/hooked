@@ -1,5 +1,6 @@
-package com.flaco.hooked.domain.categoria;
+package com.flaco.hooked.domain.repository;
 
+import com.flaco.hooked.model.Categoria;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

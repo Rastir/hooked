@@ -1,7 +1,7 @@
 package com.flaco.hooked.domain.service;
 
-import com.flaco.hooked.domain.categoria.Categoria;
-import com.flaco.hooked.domain.categoria.CategoriaRepository;
+import com.flaco.hooked.model.Categoria;
+import com.flaco.hooked.domain.repository.CategoriaRepository;
 import com.flaco.hooked.domain.request.ActualizarCategoriaRequest;
 import com.flaco.hooked.domain.request.CrearCategoriaRequest;
 import com.flaco.hooked.domain.response.CategoriaResponse;

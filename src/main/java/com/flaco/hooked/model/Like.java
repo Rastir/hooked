@@ -1,7 +1,7 @@
-package com.flaco.hooked.domain.like;
+package com.flaco.hooked.model;
 
-import com.flaco.hooked.domain.post.Post;
-import com.flaco.hooked.domain.usuario.Usuario;
+import com.flaco.hooked.model.Post;
+import com.flaco.hooked.model.Usuario;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

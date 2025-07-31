@@ -1,16 +1,16 @@
 package com.flaco.hooked.domain.service;
 
-import com.flaco.hooked.domain.categoria.Categoria;
-import com.flaco.hooked.domain.categoria.CategoriaRepository;
-import com.flaco.hooked.domain.like.Like;
-import com.flaco.hooked.domain.like.LikeRepository;
-import com.flaco.hooked.domain.post.Post;
-import com.flaco.hooked.domain.post.PostRepository;
+import com.flaco.hooked.model.Categoria;
+import com.flaco.hooked.domain.repository.CategoriaRepository;
+import com.flaco.hooked.model.Like;
+import com.flaco.hooked.domain.repository.LikeRepository;
+import com.flaco.hooked.model.Post;
+import com.flaco.hooked.domain.repository.PostRepository;
 import com.flaco.hooked.domain.request.ActualizarPostRequest;
 import com.flaco.hooked.domain.request.CrearPostRequest;
 import com.flaco.hooked.domain.response.PostResponse;
-import com.flaco.hooked.domain.usuario.Usuario;
-import com.flaco.hooked.domain.usuario.UsuarioRepository;
+import com.flaco.hooked.model.Usuario;
+import com.flaco.hooked.domain.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

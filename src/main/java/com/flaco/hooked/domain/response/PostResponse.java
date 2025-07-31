@@ -11,9 +11,22 @@ public class PostResponse {
     private Integer likeCount;
     private UsuarioResponse autor;
     private CategoriaResponse categoria;
+    private Long comentariosCount;
 
     // Constructor vacío
     public PostResponse() {}
+
+    public PostResponse(Long id, String titulo, String contenido, String fotoLink, LocalDateTime fechaCreacion, Integer likeCount, UsuarioResponse autor, CategoriaResponse categoria, Long comentariosCount) {
+        this.id = id;
+        this.titulo = titulo;
+        this.contenido = contenido;
+        this.fotoLink = fotoLink;
+        this.fechaCreacion = fechaCreacion;
+        this.likeCount = likeCount;
+        this.autor = autor;
+        this.categoria = categoria;
+        this.comentariosCount = comentariosCount;
+    }
 
     // Getters y setters
     public Long getId() {
