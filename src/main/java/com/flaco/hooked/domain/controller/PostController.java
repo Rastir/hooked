@@ -3,6 +3,7 @@ package com.flaco.hooked.domain.controller;
 import com.flaco.hooked.domain.request.ActualizarPostRequest;
 import com.flaco.hooked.domain.request.CrearPostRequest;
 import com.flaco.hooked.domain.response.PostResponse;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 import com.flaco.hooked.domain.service.PostService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,32 +34,11 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(postCreado);
     }
 
-    // Obtener todos los posts
-    @GetMapping
-    public ResponseEntity<List<PostResponse>> obtenerTodosLosPosts() {
-        List<PostResponse> posts = postService.obtenerTodosPosts();
-        return ResponseEntity.ok(posts);
-    }
-
     // Obtener post por ID
     @GetMapping("/{id}")
     public ResponseEntity<PostResponse> obtenerPostPorId(@PathVariable Long id) {
         PostResponse post = postService.obtenerPostPorId(id);
         return ResponseEntity.ok(post);
-    }
-
-    // Obtener posts por usuario
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<PostResponse>> obtenerPostsPorUsuario(@PathVariable Long usuarioId) {
-        List<PostResponse> posts = postService.obtenerPostsPorUsuario(usuarioId);
-        return ResponseEntity.ok(posts);
-    }
-
-    // Obtener posts por categoría
-    @GetMapping("/categoria/{categoriaId}")
-    public ResponseEntity<List<PostResponse>> obtenerPostsPorCategoria(@PathVariable Long categoriaId) {
-        List<PostResponse> posts = postService.obtenerPostsPorCategoria(categoriaId);
-        return ResponseEntity.ok(posts);
     }
 
     // Actualizar post
@@ -134,8 +114,114 @@ public class PostController {
     @GetMapping("/mis-posts")
     public ResponseEntity<List<PostResponse>> obtenerMisPosts(Authentication authentication) {
         String emailUsuario = authentication.getName();
-        // Primero necesitamos obtener el ID del usuario por su email
-        // Esto lo podríamos agregar al servicio
         return ResponseEntity.ok(postService.obtenerPostsPorUsuario(emailUsuario));
+    }
+
+    // ENDPOINTS CON PAGINACIÓN (NUEVOS)
+
+    // Obtener todos los posts - CON DETECCIÓN AUTOMÁTICA DE PAGINACIÓN
+    @GetMapping
+    public ResponseEntity<?> obtenerPosts(
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano,
+            @RequestParam(required = false) Long categoriaId,
+            @RequestParam(required = false) String buscar) {
+
+        // Si vienen parámetros de paginación, usar versión paginada
+        if (pagina != null || tamano != null) {
+            int paginaFinal = pagina != null ? pagina : 0;
+            int tamanoFinal = tamano != null ? tamano : 10;
+
+            // Determinar qué tipo de consulta hacer
+            if (buscar != null && !buscar.trim().isEmpty()) {
+                // Búsqueda paginada
+                PaginatedResponse<PostResponse> posts = postService.buscarPostsPaginados(
+                        buscar.trim(), paginaFinal, tamanoFinal);
+                return ResponseEntity.ok(posts);
+            } else if (categoriaId != null) {
+                // Filtro por categoría paginado
+                PaginatedResponse<PostResponse> posts = postService.obtenerPostsPorCategoriaPaginados(
+                        categoriaId, paginaFinal, tamanoFinal);
+                return ResponseEntity.ok(posts);
+            } else {
+                // Lista general paginada
+                PaginatedResponse<PostResponse> posts = postService.obtenerTodosPostsPaginados(
+                        paginaFinal, tamanoFinal);
+                return ResponseEntity.ok(posts);
+            }
+        } else {
+            // Sin paginación - usar método original (COMPATIBILIDAD)
+            List<PostResponse> posts = postService.obtenerTodosPosts();
+            return ResponseEntity.ok(posts);
+        }
+    }
+
+    // Obtener posts por usuario - CON PAGINACIÓN OPCIONAL
+    @GetMapping("/usuario/{usuarioId}")
+    public ResponseEntity<?> obtenerPostsPorUsuario(
+            @PathVariable Long usuarioId,
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+
+        // Si vienen parámetros de paginación, usar versión paginada
+        if (pagina != null || tamano != null) {
+            int paginaFinal = pagina != null ? pagina : 0;
+            int tamanoFinal = tamano != null ? tamano : 10;
+
+            PaginatedResponse<PostResponse> posts = postService.obtenerPostsPorUsuarioPaginados(
+                    usuarioId, paginaFinal, tamanoFinal);
+            return ResponseEntity.ok(posts);
+        } else {
+            // Sin paginación - método original
+            List<PostResponse> posts = postService.obtenerPostsPorUsuario(usuarioId);
+            return ResponseEntity.ok(posts);
+        }
+    }
+
+    // Obtener posts por categoría - CON PAGINACIÓN OPCIONAL
+    @GetMapping("/categoria/{categoriaId}")
+    public ResponseEntity<?> obtenerPostsPorCategoria(
+            @PathVariable Long categoriaId,
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+
+        // Si vienen parámetros de paginación, usar versión paginada
+        if (pagina != null || tamano != null) {
+            int paginaFinal = pagina != null ? pagina : 0;
+            int tamanoFinal = tamano != null ? tamano : 10;
+
+            PaginatedResponse<PostResponse> posts = postService.obtenerPostsPorCategoriaPaginados(
+                    categoriaId, paginaFinal, tamanoFinal);
+            return ResponseEntity.ok(posts);
+        } else {
+            // Sin paginación - método original
+            List<PostResponse> posts = postService.obtenerPostsPorCategoria(categoriaId);
+            return ResponseEntity.ok(posts);
+        }
+    }
+
+    //Posts más populares (ordenados por likes) - SOLO PAGINADO
+    @GetMapping("/populares")
+    public ResponseEntity<PaginatedResponse<PostResponse>> obtenerPostsPopulares(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        PaginatedResponse<PostResponse> posts = postService.obtenerPostsPopularesPaginados(pagina, tamano);
+        return ResponseEntity.ok(posts);
+    }
+
+    //Buscar posts - SOLO PAGINADO
+    @GetMapping("/buscar")
+    public ResponseEntity<PaginatedResponse<PostResponse>> buscarPosts(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        if (q == null || q.trim().isEmpty()) {
+            throw new RuntimeException("El parámetro de búsqueda 'q' es requerido");
+        }
+
+        PaginatedResponse<PostResponse> posts = postService.buscarPostsPaginados(q.trim(), pagina, tamano);
+        return ResponseEntity.ok(posts);
     }
 }

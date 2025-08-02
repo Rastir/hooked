@@ -2,12 +2,16 @@ package com.flaco.hooked.domain.service;
 
 import com.flaco.hooked.domain.request.ActualizarPerfilRequest;
 import com.flaco.hooked.domain.request.CrearUsuarioRequest;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 import com.flaco.hooked.domain.response.UsuarioResponse;
 import com.flaco.hooked.model.Usuario;
 import com.flaco.hooked.domain.repository.UsuarioRepository;
 import com.flaco.hooked.domain.repository.PostRepository;
 import com.flaco.hooked.domain.repository.LikeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -317,5 +322,176 @@ public class UsuarioService {
             // Log error pero no fallar la operación
             System.err.println("Error eliminando foto anterior: " + e.getMessage());
         }
+    }
+
+    // Obtener todos los usuarios paginados (ordenados por fecha de registro)
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosPaginados(int pagina, int tamano) {
+        // Validaciones inteligentes (límite máximo 50 para usuarios)
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50; // Límite máximo para usuarios
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findAllByOrderByFechaRegistroDesc(pageable);
+
+        // Convertir a UsuarioResponse usando tu método existente
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Búsqueda paginada de usuarios
+    public PaginatedResponse<UsuarioResponse> buscarUsuariosPaginados(String termino, int pagina, int tamano) {
+        // Validaciones inteligentes
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios;
+
+        if (termino == null || termino.trim().isEmpty()) {
+            // Si no hay término, obtener todos
+            pageUsuarios = usuarioRepository.findAllByOrderByFechaRegistroDesc(pageable);
+        } else {
+            // Buscar por nombre o email (paginado)
+            String terminoLimpio = termino.trim();
+            pageUsuarios = usuarioRepository.findByNombreContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByFechaRegistroDesc(
+                    terminoLimpio, terminoLimpio, pageable);
+        }
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios por especialidad/tag específico (paginado)
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosPorTagPaginados(String tag, int pagina, int tamano) {
+        if (tag == null || tag.trim().isEmpty()) {
+            throw new RuntimeException("Tag no puede estar vacío");
+        }
+
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findByTagContaining(tag.trim(), pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios activos (con actividad reciente) paginados
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosActivosPaginados(int diasActividad, int pagina, int tamano) {
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+        if (diasActividad <= 0) diasActividad = 30; // Default 30 días
+
+        // Calcular fecha límite
+        LocalDateTime fechaLimite = LocalDateTime.now().minusDays(diasActividad);
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findByUltimaActividadAfterOrderByUltimaActividadDesc(
+                fechaLimite, pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios por nivel de pescador (paginado)
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosPorNivelPaginados(String nivel, int pagina, int tamano) {
+        if (nivel == null || nivel.trim().isEmpty()) {
+            throw new RuntimeException("Nivel de pescador no puede estar vacío");
+        }
+
+        // Validar nivel válido
+        String nivelLimpio = nivel.trim();
+        if (!nivelLimpio.equals("Principiante") && !nivelLimpio.equals("Intermedio") && !nivelLimpio.equals("Experto")) {
+            throw new RuntimeException("Nivel debe ser: Principiante, Intermedio o Experto");
+        }
+
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findByNivelPescadorOrderByFechaRegistroDesc(nivelLimpio, pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios por ubicación preferida (paginado)
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosPorUbicacionPaginados(String ubicacion, int pagina, int tamano) {
+        if (ubicacion == null || ubicacion.trim().isEmpty()) {
+            throw new RuntimeException("Ubicación no puede estar vacía");
+        }
+
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findByUbicacionPreferidaContainingIgnoreCaseOrderByFechaRegistroDesc(
+                ubicacion.trim(), pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios más activos (con más posts) paginados
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosMasActivosPaginados(int pagina, int tamano) {
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findUsuariosMasActivos(pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Usuarios nuevos (registrados recientemente) paginados
+    public PaginatedResponse<UsuarioResponse> obtenerUsuariosNuevosPaginados(int diasRecientes, int pagina, int tamano) {
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+        if (diasRecientes <= 0) diasRecientes = 7; // Default últimos 7 días
+
+        // Calcular fecha límite
+        LocalDateTime fechaLimite = LocalDateTime.now().minusDays(diasRecientes);
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.findByFechaRegistroAfterOrderByFechaRegistroDesc(
+                fechaLimite, pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
+    }
+
+    // Búsqueda avanzada combinada (paginada --> Este busca en todas partes)
+    public PaginatedResponse<UsuarioResponse> busquedaAvanzadaPaginada(String termino, int pagina, int tamano) {
+        if (termino == null || termino.trim().isEmpty()) {
+            throw new RuntimeException("Término de búsqueda no puede estar vacío");
+        }
+
+        // Validaciones
+        if (pagina < 0) pagina = 0;
+        if (tamano <= 0) tamano = 10;
+        if (tamano > 50) tamano = 50;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Usuario> pageUsuarios = usuarioRepository.busquedaAvanzada(termino.trim(), pageable);
+
+        Page<UsuarioResponse> pageResponse = pageUsuarios.map(this::convertirAResponse);
+        return new PaginatedResponse<>(pageResponse);
     }
 }

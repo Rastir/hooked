@@ -5,10 +5,14 @@ import com.flaco.hooked.domain.repository.PostRepository;
 import com.flaco.hooked.domain.request.ActualizarComentarioRequest;
 import com.flaco.hooked.domain.request.CrearComentarioRequest;
 import com.flaco.hooked.domain.response.ComentarioResponse;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 import com.flaco.hooked.model.Comentario;
 import com.flaco.hooked.model.Post;
 import com.flaco.hooked.model.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -103,5 +107,86 @@ public class ComentarioService {
     @Transactional(readOnly = true)
     public long contarComentariosPorPost(Long postId) {
         return comentarioRepository.countByPostId(postId);
+    }
+
+    // Obtener comentarios de un post - PAGINADO
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ComentarioResponse> obtenerComentariosPorPostPaginados(Long postId, int pagina, int tamano) {
+        // Validar parámetros
+        if (tamano > 100) tamano = 100; // Límite mayor para comentarios
+        if (pagina < 0) pagina = 0;
+
+        // Verificar que el post existe
+        if (!postRepository.existsById(postId)) {
+            throw new RuntimeException("Post no encontrado");
+        }
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Comentario> comentarioPage = comentarioRepository.findByPostIdOrderByFechaCreacionPaginado(postId, pageable);
+        Page<ComentarioResponse> comentarioResponsePage = comentarioPage.map(ComentarioResponse::new);
+
+        return new PaginatedResponse<>(comentarioResponsePage);
+    }
+
+    // Obtener solo comentarios principales (sin respuestas) - PAGINADO
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ComentarioResponse> obtenerComentariosPrincipalesPorPostPaginados(Long postId, int pagina, int tamano) {
+        if (tamano > 100) tamano = 100;
+        if (pagina < 0) pagina = 0;
+
+        // Verificar que el post existe
+        if (!postRepository.existsById(postId)) {
+            throw new RuntimeException("Post no encontrado");
+        }
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Comentario> comentarioPage = comentarioRepository.findComentariosPrincipalesByPostId(postId, pageable);
+        Page<ComentarioResponse> comentarioResponsePage = comentarioPage.map(ComentarioResponse::new);
+
+        return new PaginatedResponse<>(comentarioResponsePage);
+    }
+
+    // Obtener comentarios de un usuario - PAGINADO
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ComentarioResponse> obtenerComentariosPorUsuarioPaginados(Long usuarioId, int pagina, int tamano) {
+        if (tamano > 100) tamano = 100;
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Comentario> comentarioPage = comentarioRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId, pageable);
+        Page<ComentarioResponse> comentarioResponsePage = comentarioPage.map(ComentarioResponse::new);
+
+        return new PaginatedResponse<>(comentarioResponsePage);
+    }
+
+    // Obtener respuestas de un comentario - PAGINADO
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ComentarioResponse> obtenerRespuestasPaginadas(Long comentarioPadreId, int pagina, int tamano) {
+        if (tamano > 50) tamano = 50; // Límite menor para respuestas
+        if (pagina < 0) pagina = 0;
+
+        // Verificar que el comentario padre existe
+        if (!comentarioRepository.existsById(comentarioPadreId)) {
+            throw new RuntimeException("Comentario padre no encontrado");
+        }
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Comentario> respuestaPage = comentarioRepository.findByComentarioPadreIdOrderByFechaCreacion(comentarioPadreId, pageable);
+        Page<ComentarioResponse> respuestaResponsePage = respuestaPage.map(ComentarioResponse::new);
+
+        return new PaginatedResponse<>(respuestaResponsePage);
+    }
+
+    // Obtener comentarios recientes de un usuario (para perfil) - PAGINADO
+    @Transactional(readOnly = true)
+    public PaginatedResponse<ComentarioResponse> obtenerComentariosRecientesPorUsuarioPaginados(Long usuarioId, int pagina, int tamano) {
+        if (tamano > 50) tamano = 50; // Límite para vistas de perfil
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Comentario> comentarioPage = comentarioRepository.findComentariosRecientesByUsuarioId(usuarioId, pageable);
+        Page<ComentarioResponse> comentarioResponsePage = comentarioPage.map(ComentarioResponse::new);
+
+        return new PaginatedResponse<>(comentarioResponsePage);
     }
 }

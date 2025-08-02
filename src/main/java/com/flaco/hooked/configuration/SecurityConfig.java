@@ -60,20 +60,50 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Rutas públicas
+                        // ========== RUTAS PÚBLICAS ==========
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/comentarios/post/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // Rutas que requieren autenticación
+
+                        // ⚡ NUEVOS ENDPOINTS PÚBLICOS DE USUARIOS (LECTURA)
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios").permitAll() // Buscar usuarios (con/sin paginación)
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/{id}").permitAll() // Ver perfil público
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/especialidad/**").permitAll() // Por tag
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/activos").permitAll() // Usuarios activos
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/nivel/**").permitAll() // Por nivel
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/ubicacion/**").permitAll() // Por ubicación
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/mas-activos").permitAll() // Más activos
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/nuevos").permitAll() // Nuevos
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/buscar-avanzado").permitAll() // Búsqueda avanzada
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/stats").permitAll() // Estadísticas públicas
+
+                        // ========== RUTAS QUE REQUIEREN AUTENTICACIÓN ==========
+
+                        // Posts (CREATE, UPDATE, DELETE)
                         .requestMatchers(HttpMethod.POST, "/api/posts/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/posts/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/posts/**").authenticated()
+
+                        // Categorías (CREATE, UPDATE, DELETE)
                         .requestMatchers(HttpMethod.POST, "/api/categorias").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/categorias/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").authenticated()
-                        .requestMatchers("/api/usuarios/**").authenticated()
+
+                        // Comentarios (CREATE, UPDATE, DELETE)
+                        .requestMatchers(HttpMethod.POST, "/api/comentarios").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/comentarios/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/comentarios/**").authenticated()
+
+                        // USUARIOS - OPERACIONES PRIVADAS (requieren autenticación)
+                        .requestMatchers("/api/usuarios/perfil").authenticated() // Mi perfil (GET y PUT)
+                        .requestMatchers("/api/usuarios/perfil/**").authenticated() // Subir foto, etc.
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios/**").authenticated() // Cualquier POST
+                        .requestMatchers(HttpMethod.PUT, "/api/usuarios/**").authenticated() // Cualquier PUT
+                        .requestMatchers(HttpMethod.DELETE, "/api/usuarios/**").authenticated() // Cualquier DELETE
+
+                        // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
