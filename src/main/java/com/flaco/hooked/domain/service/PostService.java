@@ -9,9 +9,13 @@ import com.flaco.hooked.domain.repository.PostRepository;
 import com.flaco.hooked.domain.request.ActualizarPostRequest;
 import com.flaco.hooked.domain.request.CrearPostRequest;
 import com.flaco.hooked.domain.response.PostResponse;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 import com.flaco.hooked.model.Usuario;
 import com.flaco.hooked.domain.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -156,7 +160,7 @@ public class PostService {
             throw new RuntimeException("Ya has dado like a este post");
         }
 
-        // Crear nuevo like
+        // Metodo pa' poner un like
         Like like = new Like();
         like.setUsuario(usuario);
         like.setPost(post);
@@ -170,7 +174,7 @@ public class PostService {
         return convertirAResponse(postActualizado);
     }
 
-    // Método para quitar like
+    // Método pa' quitar el like
     public PostResponse quitarLike(Long postId, String emailUsuario) {
         Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
@@ -189,6 +193,69 @@ public class PostService {
         Post postActualizado = postRepository.save(post);
 
         return convertirAResponse(postActualizado);
+    }
+
+    // MÉTODOS PAGINADOS
+
+    // Obtener todos los posts - PAGINADO
+    public PaginatedResponse<PostResponse> obtenerTodosPostsPaginados(int pagina, int tamano) {
+        // Validar parámetros
+        if (tamano > 50) tamano = 50; // Límite máximo
+        if (pagina < 0) pagina = 0;   // No páginas negativas
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Post> postPage = postRepository.findAllByOrderByFechaCreacionDesc(pageable);
+        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(postResponsePage);
+    }
+
+    // Obtener posts por categoría - PAGINADO
+    public PaginatedResponse<PostResponse> obtenerPostsPorCategoriaPaginados(Long categoriaId, int pagina, int tamano) {
+        if (tamano > 50) tamano = 50;
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Post> postPage = postRepository.findByCategoriaIdOrderByFechaCreacionDesc(categoriaId, pageable);
+        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(postResponsePage);
+    }
+
+    // Obtener posts por usuario - PAGINADO
+    public PaginatedResponse<PostResponse> obtenerPostsPorUsuarioPaginados(Long usuarioId, int pagina, int tamano) {
+        if (tamano > 50) tamano = 50;
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Post> postPage = postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId, pageable);
+        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(postResponsePage);
+    }
+
+    // Buscar posts - PAGINADO
+    public PaginatedResponse<PostResponse> buscarPostsPaginados(String busqueda, int pagina, int tamano) {
+        if (tamano > 50) tamano = 50;
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Post> postPage = postRepository.buscarPostsPaginados(busqueda, pageable);
+        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(postResponsePage);
+    }
+
+    // Posts más populares - PAGINADO
+    public PaginatedResponse<PostResponse> obtenerPostsPopularesPaginados(int pagina, int tamano) {
+        if (tamano > 50) tamano = 50;
+        if (pagina < 0) pagina = 0;
+
+        Pageable pageable = PageRequest.of(pagina, tamano);
+        Page<Post> postPage = postRepository.findAllByOrderByLikeCountDesc(pageable);
+        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        return new PaginatedResponse<>(postResponsePage);
     }
 
     // Método auxiliar para convertir Post a PostResponse

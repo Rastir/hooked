@@ -2,6 +2,7 @@ package com.flaco.hooked.domain.controller;
 
 import com.flaco.hooked.domain.request.ActualizarPerfilRequest;
 import com.flaco.hooked.domain.response.UsuarioResponse;
+import com.flaco.hooked.domain.response.PaginatedResponse; // ⚡ NUEVO IMPORT
 import com.flaco.hooked.domain.service.UsuarioService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,15 +74,162 @@ public class UsuarioController {
         }
     }
 
-    // BUSCAR USUARIOS
+    // ==========  BÚSQUEDA CON PAGINACIÓN AUTOMATICA ==========
+
+    // LISTAR/BUSCAR USUARIOS (con detección automática de paginación)
     @GetMapping
-    public ResponseEntity<List<UsuarioResponse>> listarUsuarios(
-            @RequestParam(required = false) String buscar) {
+    public ResponseEntity<?> listarUsuarios(
+            @RequestParam(required = false) String buscar,
+            @RequestParam(required = false) Integer pagina,
+            @RequestParam(required = false) Integer tamano) {
+
         try {
-            List<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(buscar);
+            // DETECCIÓN AUTOMÁTICA: Si vienen parámetros de paginación -> usar versión paginada
+            if (pagina != null || tamano != null) {
+                // Valores por defecto para paginación
+                int paginaFinal = (pagina != null) ? pagina : 0;
+                int tamanoFinal = (tamano != null) ? tamano : 10;
+
+                // Usar servicio paginado
+                PaginatedResponse<UsuarioResponse> usuarios = usuarioService.buscarUsuariosPaginados(
+                        buscar, paginaFinal, tamanoFinal);
+                return ResponseEntity.ok(usuarios);
+
+            } else {
+                //Sin parámetros -> comportamiento original
+                List<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(buscar);
+                return ResponseEntity.ok(usuarios);
+            }
+
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // Usuarios por especialidad/tag específico
+    @GetMapping("/especialidad/{tag}")
+    public ResponseEntity<?> obtenerUsuariosPorTag(
+            @PathVariable String tag,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosPorTagPaginados(
+                    tag, pagina, tamano);
             return ResponseEntity.ok(usuarios);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // Usuarios activos (con actividad reciente)
+    @GetMapping("/activos")
+    public ResponseEntity<?> obtenerUsuariosActivos(
+            @RequestParam(defaultValue = "30") int dias,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosActivosPaginados(
+                    dias, pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // Usuarios por nivel de experiencia
+    @GetMapping("/nivel/{nivel}")
+    public ResponseEntity<?> obtenerUsuariosPorNivel(
+            @PathVariable String nivel,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosPorNivelPaginados(
+                    nivel, pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // Usuarios por ubicación
+    @GetMapping("/ubicacion/{ubicacion}")
+    public ResponseEntity<?> obtenerUsuariosPorUbicacion(
+            @PathVariable String ubicacion,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosPorUbicacionPaginados(
+                    ubicacion, pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // Usuarios más activos (con más posts)
+    @GetMapping("/mas-activos")
+    public ResponseEntity<?> obtenerUsuariosMasActivos(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosMasActivosPaginados(
+                    pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // Usuarios nuevos (registrados recientemente)
+    @GetMapping("/nuevos")
+    public ResponseEntity<?> obtenerUsuariosNuevos(
+            @RequestParam(defaultValue = "7") int dias,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosNuevosPaginados(
+                    dias, pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // Búsqueda avanzada (busca en múltiples campos)
+    @GetMapping("/buscar-avanzado")
+    public ResponseEntity<?> busquedaAvanzada(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        try {
+            PaginatedResponse<UsuarioResponse> usuarios = usuarioService.busquedaAvanzadaPaginada(
+                    q, pagina, tamano);
+            return ResponseEntity.ok(usuarios);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
