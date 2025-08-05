@@ -1,8 +1,24 @@
+# ========== DOCUMENTACIÓN ==========
 HELP.md
+
+# ========== BUILD ==========
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
-!**/src/test/**/target/
+!**/src/test/**/test/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+*.jar
+*.war
+*.class
+
+# ========== IDE ==========
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
 
 ### STS ###
 .apt_generated
@@ -13,21 +29,35 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
+
+# ========== CONFIGURACIÓN SENSIBLE ==========
+application-local.properties
+application-prod.properties
+.env
+*.env
+cloudinary.properties
+
+# ========== SPRING BOOT ==========
+application-*.properties
+!application.properties
+
+# ========== UPLOADS LOCALES ==========
+uploads/
+temp/
+
+# ========== LOGS ==========
+*.log
+logs/
+
+# ========== SISTEMA OPERATIVO ==========
+.DS_Store
+Thumbs.db

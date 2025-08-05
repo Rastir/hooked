@@ -41,11 +41,11 @@ public class UsuarioService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private ImageStorageService imageStorageService;
 
-    // 📁 Directorio para fotos de perfil (100% casero)
+    // fallback/referencia en caso de fallo del server
     private final String UPLOAD_DIR = "uploads/profiles/";
-
-    // ✅ MÉTODOS ORIGINALES (mantenidos exactamente igual)
 
     public List<Usuario> listarTodos() {
         return usuarioRepository.findAll();
@@ -85,27 +85,19 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
-    // 🆕 NUEVOS MÉTODOS DE PERFIL (Enterprise Level)
-
-    /**
-     * Obtener perfil completo por email (para usuario autenticado)
-     */
+    // Obtener perfil completo por email (para usuario autenticado)
     public UsuarioResponse obtenerPerfilPorEmail(String email) {
         Usuario usuario = buscarPorEmail(email);
         return convertirAResponse(usuario);
     }
 
-    /**
-     * Obtener perfil público por ID (para ver otros usuarios)
-     */
+    // Obtener perfil público por ID (para ver otros usuarios)
     public UsuarioResponse obtenerPerfilPublico(Long id) {
         Usuario usuario = buscarPorId(id);
         return convertirAResponse(usuario);
     }
 
-    /**
-     * Actualizar perfil del usuario autenticado
-     */
+    // Actualizar perfil del usuario autenticado
     public UsuarioResponse actualizarPerfil(String email, ActualizarPerfilRequest request) {
         Usuario usuario = buscarPorEmail(email);
 
@@ -148,9 +140,7 @@ public class UsuarioService {
         return convertirAResponse(usuarioActualizado);
     }
 
-    /**
-     * Buscar usuarios con DTOs seguros
-     */
+    // Buscar usuarios con DTOs seguros
     public List<UsuarioResponse> buscarUsuarios(String termino) {
         List<Usuario> usuarios;
 
@@ -167,10 +157,9 @@ public class UsuarioService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Subir foto de perfil (100% casero - sin AWS)
-     */
+    //Subir foto de perfil (Cloudinary)
     public String subirFotoPerfil(String email, MultipartFile archivo) {
+        // validaciones
         if (archivo.isEmpty()) {
             throw new RuntimeException("Archivo de imagen está vacío");
         }
@@ -189,43 +178,35 @@ public class UsuarioService {
         Usuario usuario = buscarPorEmail(email);
 
         try {
-            // Crear directorio si no existe
-            Path uploadPath = Paths.get(UPLOAD_DIR);
-            if (!Files.exists(uploadPath)) {
-                Files.createDirectories(uploadPath);
-            }
+            // Subir a Cloudinary
+            String urlImagenAnterior = usuario.getFotoPerfil();
+            String nuevaUrlImagen = imageStorageService.subirImagen(archivo, "profiles");
 
-            // Generar nombre único para la imagen
-            String extension = obtenerExtension(archivo.getOriginalFilename());
-            String nombreArchivo = "usuario_" + usuario.getId() + "_" + UUID.randomUUID() + extension;
-            Path archivoPath = uploadPath.resolve(nombreArchivo);
-
-            // Eliminar foto anterior si existe
-            if (usuario.tieneFotoPerfil()) {
-                eliminarFotoAnterior(usuario.getFotoPerfil());
-            }
-
-            // Guardar nueva foto
-            Files.copy(archivo.getInputStream(), archivoPath);
-
-            // Actualizar usuario
-            String fotoUrl = "/" + UPLOAD_DIR + nombreArchivo;
-            usuario.setFotoPerfil(fotoUrl);
+            // Actualizar usuario con la nueva URL pública
+            usuario.setFotoPerfil(nuevaUrlImagen);
             usuario.actualizarUltimaActividad();
             usuarioRepository.save(usuario);
 
-            return fotoUrl;
+            // Limpiar imagen anterior de Cloudinary
+            if (urlImagenAnterior != null && urlImagenAnterior.contains("cloudinary.com")) {
+                try {
+                    imageStorageService.eliminarImagen(urlImagenAnterior);
+                } catch (Exception e) {
+                    // Log pero no fallar la operación principal
+                    System.err.println("No se pudo eliminar imagen anterior de Cloudinary: " + e.getMessage());
+                }
+            }
+
+            return nuevaUrlImagen;
 
         } catch (IOException e) {
-            throw new RuntimeException("Error al subir la imagen: " + e.getMessage());
+            throw new RuntimeException("Error al subir la imagen a Cloudinary: " + e.getMessage());
         }
     }
 
-    // 🔧 MÉTODOS PRIVADOS DE UTILIDAD (la magia interna)
+    // MÉTODOS PRIVADOS DE UTILIDAD
 
-    /**
-     * Convertir Usuario a UsuarioResponse con estadísticas calculadas
-     */
+    // Convertir Usuario a UsuarioResponse con estadísticas calculadas
     private UsuarioResponse convertirAResponse(Usuario usuario) {
         UsuarioResponse response = new UsuarioResponse();
 
