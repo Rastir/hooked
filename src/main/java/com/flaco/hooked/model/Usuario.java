@@ -13,8 +13,31 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
-@Table(name = "usuarios")
+@Table(name = "usuarios", indexes = {
+        // Indice para un login rápido
+        @Index(name = "idx_usuario_email", columnList = "email", unique = true),
+
+        // Indices para busqueda avanzada - Multicamp
+        @Index(name = "idx_usuario_nombre", columnList = "nombre"),
+        @Index(name = "idx_usuario_ubicacion", columnList = "ubicacion_preferida"),
+        //Pendiente de agregar un index para los tags
+        // este está roto -- >  @Index(name = "idx_usuario_tags", columnList = "tags"),
+        @Index(name = "idx_usuario_nivel", columnList = "nivel_pescador"),
+
+        //Ordenamiento y filtros por fecha
+        @Index(name = "idx_usuario_fecha_registro", columnList = "fecha_registro DESC"),
+        @Index(name = "idx_usuario_ultima_actividad", columnList = "ultima_actividad DESC"),
+
+        // Combinaciones frecuentes
+        @Index(name = "idx_usuario_nivel_fecha", columnList = "nivel_pescador, fecha_registro DESC"),
+        @Index(name = "idx_usuario_ubicacion_fecha", columnList = "ubicacion_preferida, fecha_registro DESC"),
+        @Index(name = "idx_usuario_actividad_fecha", columnList = "ultima_actividad, fecha_registro DESC"),
+
+        // Indice para usuarios más activos (optimiza el GROUP BY)
+        @Index(name = "idx_usuario_posts_count", columnList = "id, fecha_registro DESC")
+})
 public class Usuario implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,16 +54,16 @@ public class Usuario implements UserDetails {
 
     //CAMPOS DE PERFIL
     @Column(name = "foto_perfil")
-    private String fotoPerfil;           // URL/path de la foto de perfil
+    private String fotoPerfil;
 
     @Column(name = "bio", length = 500)
-    private String bio;                  // Historia/descripción del pescador
+    private String bio;
 
     @Column(name = "ubicacion_preferida", length = 100)
-    private String ubicacionPreferida;   // "Cancún, Quintana Roo"
+    private String ubicacionPreferida;
 
     @Column(name = "tags", length = 1000)
-    private String tagsString;           // "Pesca nocturna,Experto en robalo,Guía certificado"
+    private String tagsString;
 
     // ESTADISTICA
     @Column(name = "fecha_registro")
@@ -50,7 +73,7 @@ public class Usuario implements UserDetails {
     private LocalDateTime ultimaActividad;
 
     @Column(name = "nivel_pescador", length = 20)
-    private String nivelPescador;        // "Principiante", "Intermedio", "Experto"
+    private String nivelPescador;
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
     @JsonIgnore

@@ -4,7 +4,26 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "comentarios")
+@Table(name = "comentarios", indexes = {
+        // Comentarios por post ordenados por fecha
+        @Index(name = "idx_comentario_post_fecha", columnList = "post_id, fecha_creacion ASC"),
+
+        // Comentarios principales (sin padre)
+        @Index(name = "idx_comentario_post_principal", columnList = "post_id, comentario_padre_id, fecha_creacion ASC"),
+
+        // INDICE PARA RESPUESTAS ANIDADAS
+        @Index(name = "idx_comentario_padre_fecha", columnList = "comentario_padre_id, fecha_creacion ASC"),
+
+        // INDICE PARA COMENTARIOS POR USUARIO
+        @Index(name = "idx_comentario_usuario_fecha", columnList = "usuario_id, fecha_creacion DESC"),
+
+        // INDICES PARA ESTADÍSTICAS Y CONTEOS
+        @Index(name = "idx_comentario_post_count", columnList = "post_id"),
+        @Index(name = "idx_comentario_usuario_count", columnList = "usuario_id"),
+
+        // INDICE PARA COMENTARIOS PADRE (verificar si tiene respuestas)
+        @Index(name = "idx_comentario_padre", columnList = "comentario_padre_id")
+})
 public class Comentario {
 
     @Id

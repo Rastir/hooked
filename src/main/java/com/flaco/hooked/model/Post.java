@@ -8,7 +8,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = {
+
+        // Lista principal ordenada por fecha
+        @Index(name = "idx_post_fecha_creacion", columnList = "fechaCreacion DESC"),
+
+        // Filtros + ordenamiento
+        @Index(name = "idx_post_usuario_fecha", columnList = "usuario_id, fechaCreacion DESC"),
+        @Index(name = "idx_post_categoria_fecha", columnList = "categoria_id, fechaCreacion DESC"),
+        @Index(name = "idx_post_usuario_categoria_fecha", columnList = "usuario_id, categoria_id, fechaCreacion DESC"),
+
+        // INDICE PARA POSTS POPULARES
+        @Index(name = "idx_post_likes", columnList = "likeCount DESC"),
+
+        // INDICE PARA BÚSQUEDAS
+        @Index(name = "idx_post_titulo", columnList = "titulo"),
+
+        // INDICES PARA ESTADÍSTICAS
+        @Index(name = "idx_post_usuario_stats", columnList = "usuario_id"),
+        @Index(name = "idx_post_categoria_stats", columnList = "categoria_id")
+})
 public class Post {
 
     @Id
@@ -42,6 +61,8 @@ public class Post {
     // Relación con los comentarios del post
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Comentario> comentarios = new ArrayList<>();
+
+    // (constructores, getters, setters, métodos helper, etc.)
 
     //CONSTRUCTORES
     public Post() {
