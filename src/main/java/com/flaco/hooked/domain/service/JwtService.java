@@ -19,6 +19,9 @@ public class JwtService {
     @Value("${api.security.token.secret:secret-key-default}")
     private String llave;
 
+    @Value("${hooked.jwt.expiration:900000}")
+    private long jwtExpirationMs;
+
     public String generarToken(Usuario usuario){
         try{
             Algorithm algorithm = Algorithm.HMAC256(llave);
@@ -48,9 +51,17 @@ public class JwtService {
         }
     }
 
+    // Método para obtener la duración de expiración en milisegundos (necesario para el AuthController)
+    public long getExpirationMs() {
+        return jwtExpirationMs;
+    }
+
+    // ACTUALIZADO: Usar la configuración en lugar de 24 horas fijas
     private Instant generarFechaExpiracion(){
+        // Antes: 24 horas fijas
+        // Ahora: usar la configuración (15 minutos por defecto)
         return LocalDateTime.now()
-                .plusHours(24)
+                .plusSeconds(jwtExpirationMs / 1000) // Convertir ms a segundos
                 .toInstant(ZoneOffset.of("-05:00")); // hora de Cancún
     }
 }
