@@ -7,10 +7,8 @@ public class MessageResponse {
 
     public MessageResponse() {}
 
-
     public MessageResponse(String message) {
-        this.message = message;
-        this.success = true;
+        this(message, true);
     }
 
     public MessageResponse(String message, boolean success) {
@@ -18,7 +16,7 @@ public class MessageResponse {
         this.success = success;
     }
 
-    // Métodos estáticos para crear respuestas comunes
+    // Factory methods
     public static MessageResponse success(String message) {
         return new MessageResponse(message, true);
     }
@@ -27,19 +25,15 @@ public class MessageResponse {
         return new MessageResponse(message, false);
     }
 
-    // Getters
+    // Getters y setters
     public String getMessage() { return message; }
-    public boolean isSuccess() { return success; }
-
-    // Setters
     public void setMessage(String message) { this.message = message; }
+
+    public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
 
     @Override
     public String toString() {
-        return "MessageResponse{" +
-                "message='" + message + '\'' +
-                ", success=" + success +
-                '}';
+        return "MessageResponse{success=" + success + ", message='" + message + "'}";
     }
 }

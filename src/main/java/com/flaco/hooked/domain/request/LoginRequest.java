@@ -2,43 +2,29 @@ package com.flaco.hooked.domain.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import jakarta.validation.constraints.Size;
 
 public class LoginRequest {
 
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "El email debe tener un formato válido")
+    @Size(max = 255, message = "El email no puede exceder 255 caracteres")
     private String email;
 
     @NotBlank(message = "La contraseña es obligatoria")
-    private String password;
+    @Size(min = 6, max = 100, message = "La contraseña debe tener entre 6 y 100 caracteres")
+    private String contrasena;
 
-    // Constructor vacío
     public LoginRequest() {}
 
-    // Constructor con parámetros
-    public LoginRequest(String email, String password) {
+    public LoginRequest(String email, String contrasena) {
         this.email = email;
-        this.password = password;
+        this.contrasena = contrasena;
     }
 
-    // Getters y Setters
-    public String getEmail() {
-        return email;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public String getContrasena() { return contrasena; }
+    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
 }

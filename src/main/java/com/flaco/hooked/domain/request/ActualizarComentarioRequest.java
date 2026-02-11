@@ -5,8 +5,8 @@ import jakarta.validation.constraints.Size;
 
 public class ActualizarComentarioRequest {
 
-    @NotBlank(message = "El contenido no puede estar vacío")
-    @Size(min = 1, max = 1000, message = "El contenido debe tener entre 1 y 1000 caracteres")
+    @NotBlank(message = "El contenido es obligatorio")
+    @Size(min = 1, max = 1000, message = "El comentario debe tener entre 1 y 1000 caracteres")
     private String contenido;
 
     public ActualizarComentarioRequest() {}
