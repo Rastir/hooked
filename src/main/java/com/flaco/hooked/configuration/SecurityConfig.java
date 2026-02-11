@@ -1,8 +1,9 @@
 package com.flaco.hooked.configuration;
 
-import com.flaco.hooked.domain.filter.JwtAuthenticationFilter;
 import com.flaco.hooked.domain.service.CustomUserDetailsService;
+import com.flaco.hooked.domain.filter.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -35,8 +36,11 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Value("${cors.allowed-origins:*}")
+    private String allowedOrigins;
+
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
@@ -49,7 +53,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception{
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
@@ -60,51 +64,27 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Auth público
+                        .requestMatchers("/api/auth/**").permitAll()
 
-                        // ========== RUTAS PÚBLICAS - AUTENTICACIÓN (PRIMERA PRIORIDAD) ==========
-                        .requestMatchers("/api/auth/**").permitAll()  // ← ESTO DEBE IR PRIMERO
-
-                        // ========== OTRAS RUTAS PÚBLICAS ==========
-                        .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/comentarios/post/**").permitAll()
+                        // Swagger
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // ⚡ USUARIOS - ENDPOINTS PÚBLICOS (LECTURA)
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/{id}").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/especialidad/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/activos").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/nivel/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/ubicacion/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/mas-activos").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/nuevos").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/buscar-avanzado").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/stats").permitAll()
+                        // Categorías - lectura pública
+                        .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").permitAll()
 
-                        // ========== RUTAS QUE REQUIEREN AUTENTICACIÓN ==========
+                        // Posts - lectura pública
+                        .requestMatchers(HttpMethod.GET, "/api/posts", "/api/posts/**").permitAll()
 
-                        // Posts (CREATE, UPDATE, DELETE)
-                        .requestMatchers(HttpMethod.POST, "/api/posts/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/posts/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/posts/**").authenticated()
+                        // Comentarios - lectura pública
+                        .requestMatchers(HttpMethod.GET, "/api/comentarios/post/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/comentarios/**").permitAll()
 
-                        // Categorías (CREATE, UPDATE, DELETE)
-                        .requestMatchers(HttpMethod.POST, "/api/categorias").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/categorias/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").authenticated()
+                        // Usuarios - lectura pública
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").permitAll()
 
-                        // Comentarios (CREATE, UPDATE, DELETE)
-                        .requestMatchers(HttpMethod.POST, "/api/comentarios").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/comentarios/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/comentarios/**").authenticated()
-
-                        // USUARIOS - OPERACIONES PRIVADAS
-                        .requestMatchers("/api/usuarios/perfil").authenticated()
-                        .requestMatchers("/api/usuarios/perfil/**").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/**").authenticated()
-                        .requestMatchers(HttpMethod.PUT, "/api/usuarios/**").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/usuarios/**").authenticated()
+                        // Likes - requiere auth
+                        .requestMatchers("/api/likes/**").authenticated()
 
                         // Todo lo demás requiere autenticación
                         .anyRequest().authenticated()
@@ -118,9 +98,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*")); // Para desarrollo
+
+        // Parsear origins desde properties
+        if (allowedOrigins.equals("*")) {
+            configuration.setAllowedOrigins(Arrays.asList("*"));
+        } else {
+            configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        }
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

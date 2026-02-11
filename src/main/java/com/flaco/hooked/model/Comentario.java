@@ -2,6 +2,8 @@ package com.flaco.hooked.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "comentarios", indexes = {
@@ -48,6 +50,10 @@ public class Comentario {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "comentario_padre_id")
     private Comentario comentarioPadre;
+    //Para respuestas inversas
+    @OneToMany(mappedBy = "comentarioPadre", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OrderBy("fechaCreacion ASC")
+    private List<Comentario> respuestas = new ArrayList<>();
 
     // Constructores
     public Comentario() {
@@ -76,7 +82,18 @@ public class Comentario {
 
     public Post getPost() { return post; }
     public void setPost(Post post) { this.post = post; }
+    public void setRespuestas(List<Comentario> respuestas) {
+        this.respuestas = respuestas;
+    }
+
+    public List<Comentario> getRespuestas() {
+        return respuestas;
+    }
 
     public Comentario getComentarioPadre() { return comentarioPadre; }
     public void setComentarioPadre(Comentario comentarioPadre) { this.comentarioPadre = comentarioPadre; }
+    public void agregarRespuesta(Comentario respuesta) {
+        respuestas.add(respuesta);
+        respuesta.setComentarioPadre(this);
+    }
 }

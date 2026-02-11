@@ -48,14 +48,13 @@ public class Post {
     private Integer likeCount = 0;
 
     // Relación de quien crea el post
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false)
     private Usuario usuario;
 
     // Relación con categoria
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id", nullable = false)
-    @JsonBackReference
     private Categoria categoria;
 
     // Relación con los comentarios del post
