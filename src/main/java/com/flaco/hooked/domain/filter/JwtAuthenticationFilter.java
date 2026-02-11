@@ -6,17 +6,22 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     @Autowired
     private JwtService jwtService;
@@ -28,38 +33,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        System.out.println("=== JWT Filter Debug ===");
-        System.out.println("Request URI: " + request.getRequestURI());
+        try {
+            String jwt = extractJwtFromRequest(request);
 
-        String authHeader = request.getHeader("Authorization");
-        System.out.println("Auth Header: " + authHeader);
-
-        if(authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // Esto debería quitar "Bearer "
-            System.out.println("Token extraído (sin Bearer): " + token.substring(0, Math.min(token.length(), 20)) + "...");
-
-            try {
-                String email = jwtService.validarToken(token);
-                System.out.println("Email extraído del token: " + email);
+            if (StringUtils.hasText(jwt)) {
+                // UNA SOLA VALIDACIÓN
+                String email = jwtService.validarToken(jwt);
 
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                    System.out.println("UserDetails cargado: " + userDetails.getUsername());
 
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities()
-                    );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                    System.out.println("Autenticación establecida");
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    logger.debug("Autenticación exitosa para: {}", email);
                 }
-            } catch (Exception e) {
-                logger.error("Error al validar el token: " + e.getMessage());
-                e.printStackTrace();
             }
+        } catch (Exception ex) {
+            logger.error("Error en autenticación JWT: {}", ex.getMessage());
+            SecurityContextHolder.clearContext();
         }
 
-        System.out.println("=== Fin JWT Filter ===");
-        filterChain.doFilter(request,response);
+        filterChain.doFilter(request, response);
+    }
+
+    private String extractJwtFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+
+        return null;
     }
 }

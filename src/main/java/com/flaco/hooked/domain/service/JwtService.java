@@ -6,6 +6,8 @@ import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.flaco.hooked.model.Usuario;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,52 +18,71 @@ import java.time.ZoneOffset;
 @Service
 public class JwtService {
 
-    @Value("${api.security.token.secret:secret-key-default}")
-    private String llave;
+    private static final Logger logger = LoggerFactory.getLogger(JwtService.class);
 
-    @Value("${hooked.jwt.expiration:900000}")
+    @Value("${api.security.token.secret}")
+    private String secretKey;
+
+    @Value("${hooked.jwt.expiration:900000}") // 15 min default
     private long jwtExpirationMs;
 
-    public String generarToken(Usuario usuario){
-        try{
-            Algorithm algorithm = Algorithm.HMAC256(llave);
-            String token = JWT.create()
-                    .withIssuer("hooked-api") // Issuer consistente
+    private static final String ISSUER = "hooked-api";
+    private static final ZoneOffset ZONE_OFFSET = ZoneOffset.of("-06:00"); // CDMX (ajusta a tu zona)
+
+    public String generarToken(Usuario usuario) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secretKey);
+
+            return JWT.create()
+                    .withIssuer(ISSUER)
                     .withSubject(usuario.getEmail())
-                    .withClaim("id", usuario.getId())
+                    .withClaim("userId", usuario.getId())
                     .withClaim("nombre", usuario.getNombre())
+                    .withIssuedAt(Instant.now())
                     .withExpiresAt(generarFechaExpiracion())
                     .sign(algorithm);
-            return token;
-        } catch (JWTCreationException e){
+
+        } catch (JWTCreationException e) {
+            logger.error("Error al generar token para usuario: {}", usuario.getEmail());
             throw new RuntimeException("Error al generar el token JWT", e);
         }
     }
 
-    public String validarToken(String token){
-        try{
-            Algorithm algorithm = Algorithm.HMAC256(llave);
-            DecodedJWT verificador = JWT.require(algorithm)
-                    .withIssuer("hooked-api") // CORREGIDO: mismo issuer que al generar
+    /**
+     * Valida token y retorna email (subject).
+     * @return email si válido, null si inválido (no lanza excepción)
+     */
+    public String validarToken(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secretKey);
+
+            DecodedJWT decodedJWT = JWT.require(algorithm)
+                    .withIssuer(ISSUER)
                     .build()
-                    .verify(token); // CORREGIDO: verificar el token, no la llave
-            return verificador.getSubject();
-        }catch (JWTVerificationException e){
-            throw new RuntimeException("Token JWT invalido o expirado", e);
+                    .verify(token);
+
+            return decodedJWT.getSubject();
+
+        } catch (JWTVerificationException e) {
+            logger.warn("Token inválido o expirado: {}", e.getMessage());
+            return null;
         }
     }
 
-    // Método para obtener la duración de expiración en milisegundos (necesario para el AuthController)
+    /**
+     * Extrae claims sin validar (útil si ya validaste antes).
+     */
+    public DecodedJWT decodificarToken(String token) {
+        return JWT.decode(token);
+    }
+
     public long getExpirationMs() {
         return jwtExpirationMs;
     }
 
-    // ACTUALIZADO: Usar la configuración en lugar de 24 horas fijas
-    private Instant generarFechaExpiracion(){
-        // Antes: 24 horas fijas
-        // Ahora: usar la configuración (15 minutos por defecto)
+    private Instant generarFechaExpiracion() {
         return LocalDateTime.now()
-                .plusSeconds(jwtExpirationMs / 1000) // Convertir ms a segundos
-                .toInstant(ZoneOffset.of("-05:00")); // hora de Cancún
+                .plusSeconds(jwtExpirationMs / 1000)
+                .toInstant(ZONE_OFFSET);
     }
 }

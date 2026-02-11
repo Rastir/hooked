@@ -1,54 +1,41 @@
 package com.flaco.hooked.domain.request;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public class CrearPostRequest {
 
-    @NotBlank
-    @Size(min = 5, max = 200, message = "El titulo debe tener entre 5 y 200 caracteres")
+    @NotBlank(message = "El título es obligatorio")
+    @Size(min = 5, max = 200, message = "El título debe tener entre 5 y 200 caracteres")
     private String titulo;
 
-    @NotBlank(message = "El contenido no puede estar en blanco")
-    @Size(min = 10, message = "El contenido debe tener al menos 10 caracteres")
+    @NotBlank(message = "El contenido es obligatorio")
+    @Size(min = 10, max = 5000, message = "El contenido debe tener entre 10 y 5000 caracteres")
     private String contenido;
 
+    @Size(max = 1000, message = "El link de la foto no puede exceder 1000 caracteres")
+    @Pattern(
+            regexp = "^(https?://.*|)$",
+            message = "El link de la foto debe ser una URL válida o estar vacío"
+    )
     private String fotoLink;
 
-    @NotNull(message = "El id de la categoría es obligatorio")
+    @NotNull(message = "La categoría es obligatoria")
+    @Positive(message = "El ID de categoría debe ser válido")
     private Long categoriaId;
 
+    // Constructor vacío
+    public CrearPostRequest() {}
+
     // Getters y setters
-    public String getTitulo() {
-        return titulo;
-    }
+    public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) { this.titulo = titulo; }
 
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
+    public String getContenido() { return contenido; }
+    public void setContenido(String contenido) { this.contenido = contenido; }
 
-    public String getContenido() {
-        return contenido;
-    }
+    public String getFotoLink() { return fotoLink; }
+    public void setFotoLink(String fotoLink) { this.fotoLink = fotoLink; }
 
-    public void setContenido(String contenido) {
-        this.contenido = contenido;
-    }
-
-    public String getFotoLink() {
-        return fotoLink;
-    }
-
-    public void setFotoLink(String fotoLink) {
-        this.fotoLink = fotoLink;
-    }
-
-    public Long getCategoriaId() {
-        return categoriaId;
-    }
-
-    public void setCategoriaId(Long categoriaId) {
-        this.categoriaId = categoriaId;
-    }
+    public Long getCategoriaId() { return categoriaId; }
+    public void setCategoriaId(Long categoriaId) { this.categoriaId = categoriaId; }
 }

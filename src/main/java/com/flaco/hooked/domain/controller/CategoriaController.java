@@ -1,105 +1,105 @@
 package com.flaco.hooked.domain.controller;
 
+import com.flaco.hooked.domain.request.*;
+import com.flaco.hooked.domain.response.*;
 import com.flaco.hooked.domain.service.CategoriaService;
-import com.flaco.hooked.domain.request.ActualizarCategoriaRequest;
-import com.flaco.hooked.domain.request.CrearCategoriaRequest;
-import com.flaco.hooked.domain.response.CategoriaResponse;
-import com.flaco.hooked.model.Post;
-import com.flaco.hooked.domain.repository.PostRepository;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/categorias")
+@Validated
 public class CategoriaController {
 
-    @Autowired
-    private CategoriaService categoriaService;
+    @Autowired private CategoriaService categoriaService;
 
-    @Autowired
-    private PostRepository postRepository;
+    // ========== CRUD ==========
 
-    //Crear categoría (CREATE)
     @PostMapping
-    public ResponseEntity<?> crearCategoria(@Valid @RequestBody CrearCategoriaRequest request) {
-        try {
-            CategoriaResponse categoria = categoriaService.crearCategoria(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(categoria);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<CategoriaResponse> crear(@Valid @RequestBody CrearCategoriaRequest request) {
+        CategoriaResponse creada = categoriaService.crearCategoria(request);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .header("X-Category-Created", "true")
+                .header("X-Category-ID", creada.getId().toString())
+                .body(creada);
     }
 
-    //Traer categorías (READ)
     @GetMapping
-    public ResponseEntity<List<CategoriaResponse>> obtenerTodasLasCategorias() {
+    public ResponseEntity<List<CategoriaResponse>> listar() {
         List<CategoriaResponse> categorias = categoriaService.obtenerTodasLasCategorias();
-        return ResponseEntity.ok(categorias);
+
+        return ResponseEntity.ok()
+                .header("X-Total-Categories", String.valueOf(categorias.size()))
+                .header("Cache-Control", "public, max-age=600")
+                .body(categorias);
     }
 
-    //Traer categoría por ID (READ)
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerCategoriaPorId(@PathVariable Long id) {
-        try {
-            CategoriaResponse categoria = categoriaService.obtenerCategoriaPorId(id);
-            return ResponseEntity.ok(categoria);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<CategoriaResponse> obtener(@PathVariable @Positive Long id) {
+        CategoriaResponse categoria = categoriaService.obtenerCategoriaPorId(id);
+
+        return ResponseEntity.ok()
+                .header("X-Category-ID", categoria.getId().toString())
+                .header("Cache-Control", "public, max-age=300")
+                .body(categoria);
     }
 
-    //Actualizar categoría (UPDATE)
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarCategoria(
-            @PathVariable Long id,
+    public ResponseEntity<CategoriaResponse> actualizar(
+            @PathVariable @Positive Long id,
             @Valid @RequestBody ActualizarCategoriaRequest request) {
-        try {
-            CategoriaResponse categoria = categoriaService.actualizarCategoria(id, request);
-            return ResponseEntity.ok(categoria);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+
+        CategoriaResponse actualizada = categoriaService.actualizarCategoria(id, request);
+
+        return ResponseEntity.ok()
+                .header("X-Category-Updated", "true")
+                .header("X-Category-ID", actualizada.getId().toString())
+                .body(actualizada);
     }
 
-    //Borrar categoría(DELETE)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarCategoria(@PathVariable Long id) {
-        try {
-            categoriaService.eliminarCategoria(id);
-            return ResponseEntity.ok("Categoría eliminada exitosamente");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<Void> eliminar(@PathVariable @Positive Long id) {
+        categoriaService.eliminarCategoria(id);
+
+        return ResponseEntity.noContent()
+                .header("X-Category-Deleted", "true")
+                .header("X-Deleted-ID", id.toString())
+                .build();
     }
 
-    //Traer categorías por ID (READ)
-    @GetMapping("/{id}/posts")
-    public ResponseEntity<?> obtenerPostsPorCategoria(@PathVariable Long id) {
-        // Verificar que la categoría existe usando el service
-        if (!categoriaService.existeCategoria(id)) {
-            return ResponseEntity.notFound().build();
-        }
+    // ========== CONSULTAS ==========
 
-        List<Post> posts = postRepository.findByCategoriaIdOrderByFechaCreacionDesc(id);
-        return ResponseEntity.ok(posts);
-    }
-
-    //Buscar categorias por nombre (READ)
     @GetMapping("/buscar")
-    public ResponseEntity<List<CategoriaResponse>> buscarCategorias(@RequestParam String nombre) {
-        List<CategoriaResponse> categorias = categoriaService.buscarPorNombre(nombre);
-        return ResponseEntity.ok(categorias);
+    public ResponseEntity<List<CategoriaResponse>> buscar(
+            @RequestParam @Size(min = 2) String nombre) {
+
+        List<CategoriaResponse> categorias = categoriaService.buscarPorNombre(nombre.trim());
+
+        return ResponseEntity.ok()
+                .header("X-Search-Term", nombre.trim())
+                .header("X-Results-Found", String.valueOf(categorias.size()))
+                .body(categorias);
     }
 
-    //Datos estadisticos
+    // ========== ESTADÍSTICAS ==========
+
     @GetMapping("/stats")
-    public ResponseEntity<?> obtenerEstadisticas() {
-        long totalCategorias = categoriaService.contarCategorias();
-        return ResponseEntity.ok("Total de categorías: " + totalCategorias);
+    public ResponseEntity<?> estadisticas() {
+        long total = categoriaService.contarCategorias();
+
+        return ResponseEntity.ok()
+                .header("X-Total-Categories", String.valueOf(total))
+                .header("Cache-Control", "public, max-age=300")
+                .body(new StatsResponse(total));
     }
+
+    // Record para respuesta de stats
+    private record StatsResponse(long totalCategorias) {}
 }

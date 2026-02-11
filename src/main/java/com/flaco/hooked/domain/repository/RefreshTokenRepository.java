@@ -36,4 +36,5 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
 
     // Método adicional para encontrar tokens por usuario (útil para debugging)
     List<RefreshToken> findByUsuario(Usuario usuario);
+    List<RefreshToken> findByUsuarioAndActivoTrueOrderByFechaCreacionAsc(Usuario usuario);
 }
