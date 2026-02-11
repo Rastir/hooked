@@ -237,6 +237,16 @@ public class Usuario implements UserDetails {
         }
     }
 
+    public void addPost(Post post) {
+        posts.add(post);
+        post.setUsuario(this);
+    }
+
+    public void removePost(Post post) {
+        posts.remove(post);
+        post.setUsuario(null);
+    }
+
     // Getter/Setter para el campo String interno (para JPA)
     public String getTagsString() {
         return tagsString;
