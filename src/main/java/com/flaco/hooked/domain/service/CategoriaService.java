@@ -58,7 +58,7 @@ public class CategoriaService {
                 .orElseThrow(() -> new RuntimeException("Categoria no encontrada con el ID : " + id));
 
         //Validar cambio de nombre
-        if (request.getNombre() != null && request.getNombre().equals(categoria.getNombre())){
+        if (request.getNombre() != null && !request.getNombre().equalsIgnoreCase(categoria.getNombre())){
             if(categoriaRepository.existsByNombreIgnoreCase(request.getNombre())){
                 throw new RuntimeException("Ya existe una categoría con el nombre : " + request.getNombre());
             }

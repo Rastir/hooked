@@ -1,36 +1,29 @@
 package com.flaco.hooked.domain.response;
 
 import com.flaco.hooked.model.Usuario;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class UsuarioResponse {
 
-    //DATOS BÁSICOS (seguros)
     private Long id;
     private String nombre;
     private String email;
     private LocalDateTime fechaRegistro;
 
-    // NUEVAS FUNCIONALIDADES DE PERFIL <-- importante
-    private String fotoPerfil;           // URL/path de la foto
-    private String bio;                  // Historia del pescador
-    private List<String> tags;           // ["Pesca nocturna", "Experto en robalo"]
-    private String ubicacionPreferida;   // "Cancún, Quintana Roo"
+    private String fotoPerfil;
+    private String bio;
+    private List<String> tags;
+    private String ubicacionPreferida;
 
-    // ESTADÍSTICAS
-    private Integer totalPosts;          // Cantidad de posts del usuario
-    private Integer totalLikes;          // Likes recibidos en todos sus posts
-    private Integer totalComentarios;    // Para futuro sistema de comentarios
+    private Integer totalPosts;
+    private Integer totalLikes;
+    private Integer totalComentarios;
 
-    // DATOS ESPECÍFICOS DE PESCADOR (para futuro)
-    private LocalDateTime ultimaActividad;  // Último post/like/comentario
-    private String nivelPescador;           // "Principiante", "Intermedio", "Experto"
+    private LocalDateTime ultimaActividad;
+    private String nivelPescador;
 
-
-    public UsuarioResponse() {
-    }
+    public UsuarioResponse() {}
 
     public UsuarioResponse(Long id, String nombre, String email, LocalDateTime fechaRegistro,
                            String fotoPerfil, String bio, List<String> tags, String ubicacionPreferida,
@@ -51,129 +44,67 @@ public class UsuarioResponse {
         this.nivelPescador = nivelPescador;
     }
 
-    // CONSTRUCTOR DESDE ENTIDAD
     public UsuarioResponse(Usuario usuario) {
-        this.id = usuario.getId();
-        this.nombre = usuario.getNombre();
-        this.email = usuario.getEmail();
-        this.fechaRegistro = usuario.getFechaRegistro();
-        this.fotoPerfil = usuario.getFotoPerfil();
-        this.bio = usuario.getBio();
-        this.tags = usuario.getTags();
-        this.ubicacionPreferida = usuario.getUbicacionPreferida();
-        this.ultimaActividad = usuario.getUltimaActividad();
-        this.nivelPescador = usuario.getNivelPescador();
-
-        // Estadísticas se dejan null para este constructor
-        this.totalPosts = null;
-        this.totalLikes = null;
-        this.totalComentarios = null;
+        this(usuario.getId(), usuario.getNombre(), usuario.getEmail(),
+                usuario.getFechaRegistro(), usuario.getFotoPerfil(), usuario.getBio(),
+                usuario.getTags(), usuario.getUbicacionPreferida(), null, null, null,
+                usuario.getUltimaActividad(), usuario.getNivelPescador());
     }
 
+    // Getters y setters (todos igual)
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    // GETTERS
-    public Long getId() {
-        return id;
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public LocalDateTime getFechaRegistro() { return fechaRegistro; }
+    public void setFechaRegistro(LocalDateTime fechaRegistro) { this.fechaRegistro = fechaRegistro; }
+
+    public String getFotoPerfil() { return fotoPerfil; }
+    public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+
+    public List<String> getTags() { return tags; }
+    public void setTags(List<String> tags) { this.tags = tags; }
+
+    public String getUbicacionPreferida() { return ubicacionPreferida; }
+    public void setUbicacionPreferida(String ubicacionPreferida) { this.ubicacionPreferida = ubicacionPreferida; }
+
+    public Integer getTotalPosts() { return totalPosts; }
+    public void setTotalPosts(Integer totalPosts) { this.totalPosts = totalPosts; }
+
+    public Integer getTotalLikes() { return totalLikes; }
+    public void setTotalLikes(Integer totalLikes) { this.totalLikes = totalLikes; }
+
+    public Integer getTotalComentarios() { return totalComentarios; }
+    public void setTotalComentarios(Integer totalComentarios) { this.totalComentarios = totalComentarios; }
+
+    public LocalDateTime getUltimaActividad() { return ultimaActividad; }
+    public void setUltimaActividad(LocalDateTime ultimaActividad) { this.ultimaActividad = ultimaActividad; }
+
+    public String getNivelPescador() { return nivelPescador; }
+    public void setNivelPescador(String nivelPescador) { this.nivelPescador = nivelPescador; }
+
+    // Helper
+    public boolean tieneFotoPerfil() {
+        return fotoPerfil != null && !fotoPerfil.isEmpty();
     }
 
-    public String getNombre() {
-        return nombre;
+    public boolean tieneBio() {
+        return bio != null && !bio.isEmpty();
     }
 
-    public String getEmail() {
-        return email;
+    public boolean tieneUbicacion() {
+        return ubicacionPreferida != null && !ubicacionPreferida.isEmpty();
     }
 
-    public LocalDateTime getFechaRegistro() {
-        return fechaRegistro;
-    }
-
-    public String getFotoPerfil() {
-        return fotoPerfil;
-    }
-
-    public String getBio() {
-        return bio;
-    }
-
-    public List<String> getTags() {
-        return tags;
-    }
-
-    public String getUbicacionPreferida() {
-        return ubicacionPreferida;
-    }
-
-    public Integer getTotalPosts() {
-        return totalPosts;
-    }
-
-    public Integer getTotalLikes() {
-        return totalLikes;
-    }
-
-    public Integer getTotalComentarios() {
-        return totalComentarios;
-    }
-
-    public LocalDateTime getUltimaActividad() {
-        return ultimaActividad;
-    }
-
-    public String getNivelPescador() {
-        return nivelPescador;
-    }
-
-    // SETTERS
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setFechaRegistro(LocalDateTime fechaRegistro) {
-        this.fechaRegistro = fechaRegistro;
-    }
-
-    public void setFotoPerfil(String fotoPerfil) {
-        this.fotoPerfil = fotoPerfil;
-    }
-
-    public void setBio(String bio) {
-        this.bio = bio;
-    }
-
-    public void setTags(List<String> tags) {
-        this.tags = tags;
-    }
-
-    public void setUbicacionPreferida(String ubicacionPreferida) {
-        this.ubicacionPreferida = ubicacionPreferida;
-    }
-
-    public void setTotalPosts(Integer totalPosts) {
-        this.totalPosts = totalPosts;
-    }
-
-    public void setTotalLikes(Integer totalLikes) {
-        this.totalLikes = totalLikes;
-    }
-
-    public void setTotalComentarios(Integer totalComentarios) {
-        this.totalComentarios = totalComentarios;
-    }
-
-    public void setUltimaActividad(LocalDateTime ultimaActividad) {
-        this.ultimaActividad = ultimaActividad;
-    }
-
-    public void setNivelPescador(String nivelPescador) {
-        this.nivelPescador = nivelPescador;
+    public boolean tieneTags() {
+        return tags != null && !tags.isEmpty();
     }
 }

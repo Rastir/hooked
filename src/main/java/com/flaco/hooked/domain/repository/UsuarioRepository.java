@@ -3,6 +3,7 @@ package com.flaco.hooked.domain.repository;
 import com.flaco.hooked.model.Usuario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,39 +18,51 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    // ========== BÚSQUEDAS BÁSICAS ==========
+
+    @EntityGraph(attributePaths = {"posts"})
     List<Usuario> findByNombreContainingIgnoreCaseOrEmailContainingIgnoreCase(String nombre, String email);
 
-    // Traer todos los usuarios ordenados por fecha de registro
+    @EntityGraph(attributePaths = {"posts"})
     Page<Usuario> findAllByOrderByFechaRegistroDesc(Pageable pageable);
 
-    // Búsqueda paginada (versión paginada del método de arriba)
+    @EntityGraph(attributePaths = {"posts"})
     Page<Usuario> findByNombreContainingIgnoreCaseOrEmailContainingIgnoreCaseOrderByFechaRegistroDesc(
             String nombre, String email, Pageable pageable);
 
-    // Usuarios por tag específico
+    // ========== FILTROS ESPECIALIZADOS ==========
+
     @Query("SELECT u FROM Usuario u WHERE u.tagsString LIKE %:tag% ORDER BY u.fechaRegistro DESC")
     Page<Usuario> findByTagContaining(@Param("tag") String tag, Pageable pageable);
 
-    // Usuarios activos (con actividad en los últimos X días)
     Page<Usuario> findByUltimaActividadAfterOrderByUltimaActividadDesc(
             LocalDateTime fechaLimite, Pageable pageable);
 
-    // Usuarios por nivel de pescador
     Page<Usuario> findByNivelPescadorOrderByFechaRegistroDesc(String nivelPescador, Pageable pageable);
 
-    // Usuarios por ubicación preferida
     Page<Usuario> findByUbicacionPreferidaContainingIgnoreCaseOrderByFechaRegistroDesc(
             String ubicacion, Pageable pageable);
 
-    // Usuarios más activos (con más posts)
-    @Query("SELECT u FROM Usuario u LEFT JOIN u.posts p GROUP BY u ORDER BY COUNT(p) DESC, u.fechaRegistro DESC")
+    // ========== RANKING (OPTIMIZADO) ==========
+
+    // Versión optimizada: usa subquery en lugar de GROUP BY en memoria
+    @Query(value = """
+        SELECT u.* FROM usuarios u 
+        LEFT JOIN (
+            SELECT usuario_id, COUNT(*) as post_count 
+            FROM posts 
+            GROUP BY usuario_id
+        ) p ON u.id = p.usuario_id 
+        ORDER BY COALESCE(p.post_count, 0) DESC, u.fecha_registro DESC
+        """, nativeQuery = true)
     Page<Usuario> findUsuariosMasActivos(Pageable pageable);
 
-    // Usuarios nuevos (registrados recientemente)
+    // ========== RECIENTES Y BÚSQUEDA ==========
+
     Page<Usuario> findByFechaRegistroAfterOrderByFechaRegistroDesc(
             LocalDateTime fechaLimite, Pageable pageable);
 
-    // Búsqueda avanzada combinada
     @Query("SELECT u FROM Usuario u WHERE " +
             "(LOWER(u.nombre) LIKE LOWER(CONCAT('%', :termino, '%')) OR " +
             "LOWER(u.email) LIKE LOWER(CONCAT('%', :termino, '%')) OR " +
