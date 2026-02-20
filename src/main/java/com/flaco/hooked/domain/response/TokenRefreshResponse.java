@@ -9,38 +9,28 @@ public class TokenRefreshResponse {
 
     public TokenRefreshResponse() {}
 
+    // Constructor completo único
     public TokenRefreshResponse(String accessToken, String refreshToken, Long expiresIn) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.expiresIn = expiresIn;
-        this.tokenType = "Bearer";
     }
 
-    public TokenRefreshResponse(String accessToken, String refreshToken) {
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        this.tokenType = "Bearer";
-    }
-
-    // Getters
+    // Getters y setters
     public String getAccessToken() { return accessToken; }
-    public String getRefreshToken() { return refreshToken; }
-    public String getTokenType() { return tokenType; }
-    public Long getExpiresIn() { return expiresIn; }
-
-    // Setters
     public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
+
+    public String getRefreshToken() { return refreshToken; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
+
+    public String getTokenType() { return tokenType; }
     public void setTokenType(String tokenType) { this.tokenType = tokenType; }
+
+    public Long getExpiresIn() { return expiresIn; }
     public void setExpiresIn(Long expiresIn) { this.expiresIn = expiresIn; }
 
     @Override
     public String toString() {
-        return "TokenRefreshResponse{" +
-                "accessToken='" + accessToken + '\'' +
-                ", refreshToken='" + refreshToken + '\'' +
-                ", tokenType='" + tokenType + '\'' +
-                ", expiresIn=" + expiresIn +
-                '}';
+        return "TokenRefreshResponse{tokenType='" + tokenType + "', expiresIn=" + expiresIn + "}";
     }
 }
