@@ -73,21 +73,27 @@ public class PostController {
                 .build();
     }
 
-    // ========== LIKES ==========
+    // ========== LIKES CON TOGGLE ==========
 
     @PostMapping("/{id}/like")
     public ResponseEntity<PostResponse> toggleLike(
             @PathVariable @Positive Long id,
             Authentication auth) {
 
-        PostResponse post = postService.darLike(id, auth.getName());
+        // El método toggleLike maneja crear/eliminar automáticamente
+        PostResponse post = postService.toggleLike(id, auth.getName());
+
+        // Determinar qué acción se realizó basado en el estado devuelto
+        String action = post.getLikedByCurrentUser() ? "liked" : "unliked";
 
         return ResponseEntity.ok()
-                .header("X-Like-Action", "toggled")
+                .header("X-Like-Action", action)
                 .header("X-Total-Likes", post.getLikeCount().toString())
+                .header("X-User-Liked", post.getLikedByCurrentUser().toString())
                 .body(post);
     }
 
+    // Mantener DELETE por compatibilidad (opcional)
     @DeleteMapping("/{id}/like")
     public ResponseEntity<PostResponse> quitarLike(
             @PathVariable @Positive Long id,
@@ -120,19 +126,23 @@ public class PostController {
             @RequestParam(defaultValue = "0") @PositiveOrZero int pagina,
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int tamano,
             @RequestParam(required = false) Long categoriaId,
-            @RequestParam(required = false) @Size(min = 2, max = 100) String buscar) {
+            @RequestParam(required = false) @Size(min = 2, max = 100) String buscar,
+            Authentication auth) {
 
         PaginatedResponse<PostResponse> posts;
         String queryType;
 
+        // Obtener email del usuario autenticado (puede ser null si no está autenticado)
+        String emailUsuario = auth != null ? auth.getName() : null;
+
         if (buscar != null && !buscar.trim().isEmpty()) {
-            posts = postService.buscarPostsPaginados(buscar.trim(), pagina, tamano);
+            posts = postService.buscarPostsPaginados(buscar.trim(), pagina, tamano, emailUsuario);
             queryType = "search";
         } else if (categoriaId != null) {
-            posts = postService.obtenerPostsPorCategoriaPaginados(categoriaId, pagina, tamano);
+            posts = postService.obtenerPostsPorCategoriaPaginados(categoriaId, pagina, tamano, emailUsuario);
             queryType = "category";
         } else {
-            posts = postService.obtenerTodosPostsPaginados(pagina, tamano);
+            posts = postService.obtenerTodosPostsPaginados(pagina, tamano, emailUsuario);
             queryType = "list";
         }
 
@@ -145,10 +155,13 @@ public class PostController {
     public ResponseEntity<PaginatedResponse<PostResponse>> postsPorUsuario(
             @PathVariable @Positive Long usuarioId,
             @RequestParam(defaultValue = "0") @PositiveOrZero int pagina,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int tamano) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int tamano,
+            Authentication auth) {
+
+        String emailUsuario = auth != null ? auth.getName() : null;
 
         PaginatedResponse<PostResponse> posts =
-                postService.obtenerPostsPorUsuarioPaginados(usuarioId, pagina, tamano);
+                postService.obtenerPostsPorUsuarioPaginados(usuarioId, pagina, tamano, emailUsuario);
 
         return ResponseEntity.ok()
                 .headers(createPaginationHeaders(posts, "user-posts", pagina))
@@ -169,10 +182,13 @@ public class PostController {
     @GetMapping("/populares")
     public ResponseEntity<PaginatedResponse<PostResponse>> postsPopulares(
             @RequestParam(defaultValue = "0") @PositiveOrZero int pagina,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int tamano) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int tamano,
+            Authentication auth) {
+
+        String emailUsuario = auth != null ? auth.getName() : null;
 
         PaginatedResponse<PostResponse> posts =
-                postService.obtenerPostsPopularesPaginados(pagina, tamano);
+                postService.obtenerPostsPopularesPaginados(pagina, tamano, emailUsuario);
 
         return ResponseEntity.ok()
                 .headers(createPaginationHeaders(posts, "popular", pagina))
@@ -204,7 +220,7 @@ public class PostController {
         HttpHeaders h = new HttpHeaders();
         h.add("X-Query-Type", type);
         h.add("X-Page-Number", String.valueOf(pagina));
-        h.add("X-Page-Size", String.valueOf(response.getTamanoPagina())); // ← CORREGIDO
+        h.add("X-Page-Size", String.valueOf(response.getTamanoPagina()));
         h.add("X-Total-Elements", String.valueOf(response.getTotalElementos()));
         h.add("X-Total-Pages", String.valueOf(response.getTotalPaginas()));
         h.add("Cache-Control", "public, max-age=60");

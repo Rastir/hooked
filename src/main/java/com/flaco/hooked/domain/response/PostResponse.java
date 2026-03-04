@@ -13,6 +13,7 @@ public class PostResponse {
     private UsuarioResponse autor;
     private CategoriaResponse categoria;
     private Long comentariosCount;
+    private Boolean likedByCurrentUser;
 
     public PostResponse() {}
 
@@ -46,6 +47,19 @@ public class PostResponse {
                 : 0L;
     }
 
+    public PostResponse(Long id, String titulo, String contenido, String fotoLink, LocalDateTime fechaCreacion, Integer likeCount, UsuarioResponse autor, CategoriaResponse categoria, Long comentariosCount, Boolean likedByCurrentUser) {
+        this.id = id;
+        this.titulo = titulo;
+        this.contenido = contenido;
+        this.fotoLink = fotoLink;
+        this.fechaCreacion = fechaCreacion;
+        this.likeCount = likeCount;
+        this.autor = autor;
+        this.categoria = categoria;
+        this.comentariosCount = comentariosCount;
+        this.likedByCurrentUser = likedByCurrentUser;
+    }
+
     // Getters y setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -73,6 +87,13 @@ public class PostResponse {
 
     public Long getComentariosCount() { return comentariosCount; }
     public void setComentariosCount(Long comentariosCount) { this.comentariosCount = comentariosCount; }
+    public Boolean getLikedByCurrentUser() {
+        return likedByCurrentUser;
+    }
+
+    public void setLikedByCurrentUser(Boolean likedByCurrentUser) {
+        this.likedByCurrentUser = likedByCurrentUser;
+    }
 
     // Clases internas
     public static class UsuarioResponse {
@@ -115,4 +136,6 @@ public class PostResponse {
         public String getNombre() { return nombre; }
         public void setNombre(String nombre) { this.nombre = nombre; }
     }
+
+
 }
