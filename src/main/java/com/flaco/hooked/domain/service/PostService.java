@@ -54,14 +54,14 @@ public class PostService {
         post.setCategoria(categoria);
 
         Post postGuardado = postRepository.save(post);
-        return convertirAResponse(postGuardado);
+        return convertirAResponse(postGuardado, autor.getId());
     }
 
     // Obtener todos los posts
     public List<PostResponse> obtenerTodosPosts() {
         return postRepository.findAllByOrderByFechaCreacionDesc()
                 .stream()
-                .map(this::convertirAResponse)
+                .map(post -> convertirAResponse(post, null))
                 .collect(Collectors.toList());
     }
 
@@ -69,14 +69,14 @@ public class PostService {
     public PostResponse obtenerPostPorId(Long id) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
-        return convertirAResponse(post);
+        return convertirAResponse(post, null);
     }
 
     // Obtener posts por usuario
     public List<PostResponse> obtenerPostsPorUsuario(Long usuarioId) {
         return postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId)
                 .stream()
-                .map(this::convertirAResponse)
+                .map(post -> convertirAResponse(post, null))
                 .collect(Collectors.toList());
     }
 
@@ -84,7 +84,7 @@ public class PostService {
     public List<PostResponse> obtenerPostsPorCategoria(Long categoriaId) {
         return postRepository.findByCategoriaIdOrderByFechaCreacionDesc(categoriaId)
                 .stream()
-                .map(this::convertirAResponse)
+                .map(post -> convertirAResponse(post, null))
                 .collect(Collectors.toList());
     }
 
@@ -95,7 +95,7 @@ public class PostService {
 
         return postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuario.getId())
                 .stream()
-                .map(this::convertirAResponse)
+                .map(post -> convertirAResponse(post, usuario.getId()))
                 .collect(Collectors.toList());
     }
 
@@ -131,7 +131,8 @@ public class PostService {
         }
 
         Post postActualizado = postRepository.save(post);
-        return convertirAResponse(postActualizado);
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario).orElse(null);
+        return convertirAResponse(postActualizado, usuario != null ? usuario.getId() : null);
     }
 
     // Eliminar post
@@ -147,7 +148,41 @@ public class PostService {
         postRepository.delete(post);
     }
 
-    // Incrementar likes
+    // ========== LIKES CON TOGGLE ==========
+
+    // NUEVO: Toggle like (crea si no existe, elimina si existe)
+    public PostResponse toggleLike(Long postId, String emailUsuario) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post no encontrado"));
+
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        boolean yaDioLike = likeRepository.existsByUsuarioIdAndPostId(usuario.getId(), postId);
+
+        if (yaDioLike) {
+            // Quitar like
+            Like like = likeRepository.findByUsuarioIdAndPostId(usuario.getId(), postId)
+                    .orElseThrow(() -> new RuntimeException("Like no encontrado"));
+            likeRepository.delete(like);
+        } else {
+            // Dar like
+            Like like = new Like();
+            like.setUsuario(usuario);
+            like.setPost(post);
+            likeRepository.save(like);
+        }
+
+        // Actualizar contador
+        Long totalLikes = likeRepository.countByPostId(postId);
+        post.setLikeCount(totalLikes.intValue());
+        Post postActualizado = postRepository.save(post);
+
+        // Convertir a response indicando el estado actual del like
+        return convertirAResponse(postActualizado, usuario.getId());
+    }
+
+    // Mantener por compatibilidad (opcional)
     public PostResponse darLike(Long postId, String emailUsuario) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
@@ -171,7 +206,7 @@ public class PostService {
         post.setLikeCount(totalLikes.intValue());
         Post postActualizado = postRepository.save(post);
 
-        return convertirAResponse(postActualizado);
+        return convertirAResponse(postActualizado, usuario.getId());
     }
 
     // Método pa' quitar el like
@@ -192,74 +227,106 @@ public class PostService {
         post.setLikeCount(totalLikes.intValue());
         Post postActualizado = postRepository.save(post);
 
-        return convertirAResponse(postActualizado);
+        return convertirAResponse(postActualizado, usuario.getId());
     }
 
     // MÉTODOS PAGINADOS
 
     // Obtener todos los posts - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerTodosPostsPaginados(int pagina, int tamano) {
+    public PaginatedResponse<PostResponse> obtenerTodosPostsPaginados(int pagina, int tamano, String emailUsuario) {
         // Validar parámetros
         if (tamano > 50) tamano = 50; // Límite máximo
         if (pagina < 0) pagina = 0;   // No páginas negativas
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findAllByOrderByFechaCreacionDesc(pageable);
-        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        Usuario usuario = emailUsuario != null ?
+                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
+        Long usuarioId = usuario != null ? usuario.getId() : null;
+
+        Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
     // Obtener posts por categoría - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPorCategoriaPaginados(Long categoriaId, int pagina, int tamano) {
+    public PaginatedResponse<PostResponse> obtenerPostsPorCategoriaPaginados(Long categoriaId, int pagina, int tamano, String emailUsuario) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findByCategoriaIdOrderByFechaCreacionDesc(categoriaId, pageable);
-        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        Usuario usuario = emailUsuario != null ?
+                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
+        Long usuarioId = usuario != null ? usuario.getId() : null;
+
+        Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
     // Obtener posts por usuario - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPorUsuarioPaginados(Long usuarioId, int pagina, int tamano) {
+    public PaginatedResponse<PostResponse> obtenerPostsPorUsuarioPaginados(Long usuarioId, int pagina, int tamano, String emailUsuarioActual) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId, pageable);
-        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        Usuario usuarioActual = emailUsuarioActual != null ?
+                usuarioRepository.findByEmail(emailUsuarioActual).orElse(null) : null;
+        Long usuarioActualId = usuarioActual != null ? usuarioActual.getId() : null;
+
+        Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioActualId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
     // Buscar posts - PAGINADO
-    public PaginatedResponse<PostResponse> buscarPostsPaginados(String busqueda, int pagina, int tamano) {
+    public PaginatedResponse<PostResponse> buscarPostsPaginados(String busqueda, int pagina, int tamano, String emailUsuario) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.buscarPostsPaginados(busqueda, pageable);
-        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        Usuario usuario = emailUsuario != null ?
+                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
+        Long usuarioId = usuario != null ? usuario.getId() : null;
+
+        Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
     // Posts más populares - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPopularesPaginados(int pagina, int tamano) {
+    public PaginatedResponse<PostResponse> obtenerPostsPopularesPaginados(int pagina, int tamano, String emailUsuario) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findAllByOrderByLikeCountDesc(pageable);
-        Page<PostResponse> postResponsePage = postPage.map(this::convertirAResponse);
+
+        Usuario usuario = emailUsuario != null ?
+                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
+        Long usuarioId = usuario != null ? usuario.getId() : null;
+
+        Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
-    // Método auxiliar para convertir Post a PostResponse
+    // ========== MÉTODOS AUXILIARES ==========
+
+    // Sobrecarga para mantener compatibilidad
     private PostResponse convertirAResponse(Post post) {
+        return convertirAResponse(post, null);
+    }
+
+    // Método principal que recibe el ID del usuario actual
+    private PostResponse convertirAResponse(Post post, Long usuarioActualId) {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
         response.setTitulo(post.getTitulo());
@@ -280,6 +347,19 @@ public class PostService {
         categoriaResponse.setId(post.getCategoria().getId());
         categoriaResponse.setNombre(post.getCategoria().getNombre());
         response.setCategoria(categoriaResponse);
+
+        // Contar comentarios
+        response.setComentariosCount(post.getComentarios() != null
+                ? (long) post.getComentarios().size()
+                : 0L);
+
+        // Verificar si el usuario actual dio like
+        if (usuarioActualId != null) {
+            boolean dioLike = likeRepository.existsByUsuarioIdAndPostId(usuarioActualId, post.getId());
+            response.setLikedByCurrentUser(dioLike);
+        } else {
+            response.setLikedByCurrentUser(false);
+        }
 
         return response;
     }
