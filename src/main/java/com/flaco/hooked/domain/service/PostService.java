@@ -38,6 +38,8 @@ public class PostService {
     @Autowired
     private LikeRepository likeRepository;
 
+    // ========== CRUD BÁSICO ==========
+
     // Crear post
     public PostResponse crearPost(CrearPostRequest request, String emailUsuario) {
         Usuario autor = usuarioRepository.findByEmail(emailUsuario)
@@ -52,6 +54,7 @@ public class PostService {
         post.setFotoLink(request.getFotoLink());
         post.setUsuario(autor);
         post.setCategoria(categoria);
+        post.setLikeCount(0);
 
         Post postGuardado = postRepository.save(post);
         return convertirAResponse(postGuardado, autor.getId());
@@ -72,7 +75,7 @@ public class PostService {
         return convertirAResponse(post, null);
     }
 
-    // Obtener posts por usuario
+    // Obtener posts por usuario ID
     public List<PostResponse> obtenerPostsPorUsuario(Long usuarioId) {
         return postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId)
                 .stream()
@@ -104,17 +107,10 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
 
-        // Debug
-        System.out.println("Email del token: " + emailUsuario);
-        System.out.println("Email del autor del post: " + post.getUsuario().getEmail());
-        System.out.println("¿Son iguales? " + post.getUsuario().getEmail().equals(emailUsuario));
-
-        // Verificar que el usuario sea el dueño del post
         if (!post.getUsuario().getEmail().equals(emailUsuario)) {
             throw new RuntimeException("No tienes permisos para editar este post");
         }
 
-        // Actualizar solo los campos que vienen en el request
         if (request.getTitulo() != null) {
             post.setTitulo(request.getTitulo());
         }
@@ -140,179 +136,201 @@ public class PostService {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
 
-        // Verificar que el usuario sea el dueño del post
         if (!post.getUsuario().getEmail().equals(emailUsuario)) {
             throw new RuntimeException("No tienes permisos para eliminar este post");
         }
 
+        // Eliminar likes asociados primero
+        likeRepository.deleteByPostId(id);
+
         postRepository.delete(post);
     }
 
-    // ========== LIKES CON TOGGLE ==========
+    // ========== LIKES CON TOGGLE CORREGIDO ==========
 
-    // NUEVO: Toggle like (crea si no existe, elimina si existe)
-    public PostResponse toggleLike(Long postId, String emailUsuario) {
+    /**
+     * NUEVO: Toggle like usando ID numérico del usuario (más eficiente)
+     */
+    public PostResponse toggleLike(Long postId, Long usuarioId, String emailUsuario) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
 
-        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        // Si no tenemos el ID, buscar por email (fallback)
+        Long userIdToUse = usuarioId;
+        if (userIdToUse == null && emailUsuario != null) {
+            Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            userIdToUse = usuario.getId();
+        }
 
-        boolean yaDioLike = likeRepository.existsByUsuarioIdAndPostId(usuario.getId(), postId);
+        if (userIdToUse == null) {
+            throw new RuntimeException("No se pudo identificar al usuario");
+        }
+
+        boolean yaDioLike = likeRepository.existsByUsuarioIdAndPostId(userIdToUse, postId);
 
         if (yaDioLike) {
             // Quitar like
-            Like like = likeRepository.findByUsuarioIdAndPostId(usuario.getId(), postId)
-                    .orElseThrow(() -> new RuntimeException("Like no encontrado"));
-            likeRepository.delete(like);
+            likeRepository.deleteByUsuarioIdAndPostId(userIdToUse, postId);
+            System.out.println("DEBUG - Like eliminado para usuario: " + userIdToUse + " post: " + postId);
         } else {
             // Dar like
             Like like = new Like();
-            like.setUsuario(usuario);
+            // Usar referencias por ID para evitar carga completa de entidades
+            Usuario usuarioRef = usuarioRepository.findById(userIdToUse)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            like.setUsuario(usuarioRef);
             like.setPost(post);
             likeRepository.save(like);
+            System.out.println("DEBUG - Like creado para usuario: " + userIdToUse + " post: " + postId);
         }
 
-        // Actualizar contador
+        // Forzar flush para asegurar que los cambios se persistan
+        likeRepository.flush();
+
+        // Recalcular contador desde la base de datos
         Long totalLikes = likeRepository.countByPostId(postId);
         post.setLikeCount(totalLikes.intValue());
-        Post postActualizado = postRepository.save(post);
+        postRepository.save(post);
 
-        // Convertir a response indicando el estado actual del like
-        return convertirAResponse(postActualizado, usuario.getId());
+        System.out.println("DEBUG - Total likes después de toggle: " + totalLikes);
+
+        // Recargar el post para asegurar estado fresco
+        Post postActualizado = postRepository.findById(postId).orElse(post);
+
+        // Verificar el estado actual del like después de la operación
+        boolean likeActual = likeRepository.existsByUsuarioIdAndPostId(userIdToUse, postId);
+        System.out.println("DEBUG - Estado final del like: " + likeActual);
+
+        return convertirAResponse(postActualizado, userIdToUse);
     }
 
-    // Mantener por compatibilidad (opcional)
+    /**
+     * LEGACY: Mantener compatibilidad con código antiguo que solo pasa email
+     */
+    public PostResponse toggleLike(Long postId, String emailUsuario) {
+        return toggleLike(postId, null, emailUsuario);
+    }
+
+    // Mantener por compatibilidad
     public PostResponse darLike(Long postId, String emailUsuario) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post no encontrado"));
+        return toggleLike(postId, emailUsuario);
+    }
 
-        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        // Verificar si ya dio like
-        if (likeRepository.existsByUsuarioIdAndPostId(usuario.getId(), postId)) {
-            throw new RuntimeException("Ya has dado like a este post");
+    /**
+     * NUEVO: Quitar like usando ID numérico del usuario
+     */
+    public PostResponse quitarLike(Long postId, Long usuarioId, String emailUsuario) {
+        // Si no tenemos el ID, buscar por email (fallback)
+        Long userIdToUse = usuarioId;
+        if (userIdToUse == null && emailUsuario != null) {
+            Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            userIdToUse = usuario.getId();
         }
 
-        // Metodo pa' poner un like
-        Like like = new Like();
-        like.setUsuario(usuario);
-        like.setPost(post);
-        likeRepository.save(like);
+        if (userIdToUse == null) {
+            throw new RuntimeException("No se pudo identificar al usuario");
+        }
 
-        // Actualizar contador
-        Long totalLikes = likeRepository.countByPostId(postId);
-        post.setLikeCount(totalLikes.intValue());
-        Post postActualizado = postRepository.save(post);
+        // CORREGIDO: Usar delete directo
+        likeRepository.deleteByUsuarioIdAndPostId(userIdToUse, postId);
+        likeRepository.flush();
 
-        return convertirAResponse(postActualizado, usuario.getId());
-    }
-
-    // Método pa' quitar el like
-    public PostResponse quitarLike(Long postId, String emailUsuario) {
-        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        Like like = likeRepository.findByUsuarioIdAndPostId(usuario.getId(), postId)
-                .orElseThrow(() -> new RuntimeException("No has dado like a este post"));
-
-        likeRepository.delete(like);
-
-        // Actualizar contador
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
 
         Long totalLikes = likeRepository.countByPostId(postId);
         post.setLikeCount(totalLikes.intValue());
-        Post postActualizado = postRepository.save(post);
+        postRepository.save(post);
 
-        return convertirAResponse(postActualizado, usuario.getId());
+        return convertirAResponse(post, userIdToUse);
     }
 
-    // MÉTODOS PAGINADOS
+    /**
+     * LEGACY: Mantener compatibilidad
+     */
+    public PostResponse quitarLike(Long postId, String emailUsuario) {
+        return quitarLike(postId, null, emailUsuario);
+    }
 
-    // Obtener todos los posts - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerTodosPostsPaginados(int pagina, int tamano, String emailUsuario) {
-        // Validar parámetros
-        if (tamano > 50) tamano = 50; // Límite máximo
-        if (pagina < 0) pagina = 0;   // No páginas negativas
+    // ========== MÉTODOS PAGINADOS CORREGIDOS ==========
+
+    /**
+     * CORREGIDO: Ahora recibe Long usuarioId en lugar de String emailUsuario
+     */
+    public PaginatedResponse<PostResponse> obtenerTodosPostsPaginados(int pagina, int tamano, Long usuarioId) {
+        if (tamano > 50) tamano = 50;
+        if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findAllByOrderByFechaCreacionDesc(pageable);
 
-        Usuario usuario = emailUsuario != null ?
-                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
-        Long usuarioId = usuario != null ? usuario.getId() : null;
-
+        // CORREGIDO: Usar usuarioId directamente, sin buscar en BD
         Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
-    // Obtener posts por categoría - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPorCategoriaPaginados(Long categoriaId, int pagina, int tamano, String emailUsuario) {
+    /**
+     * CORREGIDO: Ahora recibe Long usuarioId en lugar de String emailUsuario
+     */
+    public PaginatedResponse<PostResponse> obtenerPostsPorCategoriaPaginados(Long categoriaId, int pagina, int tamano, Long usuarioId) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findByCategoriaIdOrderByFechaCreacionDesc(categoriaId, pageable);
 
-        Usuario usuario = emailUsuario != null ?
-                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
-        Long usuarioId = usuario != null ? usuario.getId() : null;
-
+        // CORREGIDO: Usar usuarioId directamente
         Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
-    // Obtener posts por usuario - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPorUsuarioPaginados(Long usuarioId, int pagina, int tamano, String emailUsuarioActual) {
+    /**
+     * CORREGIDO: Ahora recibe Long usuarioActualId en lugar de String emailUsuarioActual
+     */
+    public PaginatedResponse<PostResponse> obtenerPostsPorUsuarioPaginados(Long usuarioId, int pagina, int tamano, Long usuarioActualId) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findByUsuarioIdOrderByFechaCreacionDesc(usuarioId, pageable);
 
-        Usuario usuarioActual = emailUsuarioActual != null ?
-                usuarioRepository.findByEmail(emailUsuarioActual).orElse(null) : null;
-        Long usuarioActualId = usuarioActual != null ? usuarioActual.getId() : null;
-
+        // CORREGIDO: Usar usuarioActualId directamente, sin buscar en BD
         Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioActualId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
-    // Buscar posts - PAGINADO
-    public PaginatedResponse<PostResponse> buscarPostsPaginados(String busqueda, int pagina, int tamano, String emailUsuario) {
+    /**
+     * CORREGIDO: Ahora recibe Long usuarioId en lugar de String emailUsuario
+     */
+    public PaginatedResponse<PostResponse> buscarPostsPaginados(String busqueda, int pagina, int tamano, Long usuarioId) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.buscarPostsPaginados(busqueda, pageable);
 
-        Usuario usuario = emailUsuario != null ?
-                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
-        Long usuarioId = usuario != null ? usuario.getId() : null;
-
+        // CORREGIDO: Usar usuarioId directamente
         Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
     }
 
-    // Posts más populares - PAGINADO
-    public PaginatedResponse<PostResponse> obtenerPostsPopularesPaginados(int pagina, int tamano, String emailUsuario) {
+    /**
+     * CORREGIDO: Ahora recibe Long usuarioId en lugar de String emailUsuario
+     */
+    public PaginatedResponse<PostResponse> obtenerPostsPopularesPaginados(int pagina, int tamano, Long usuarioId) {
         if (tamano > 50) tamano = 50;
         if (pagina < 0) pagina = 0;
 
         Pageable pageable = PageRequest.of(pagina, tamano);
         Page<Post> postPage = postRepository.findAllByOrderByLikeCountDesc(pageable);
 
-        Usuario usuario = emailUsuario != null ?
-                usuarioRepository.findByEmail(emailUsuario).orElse(null) : null;
-        Long usuarioId = usuario != null ? usuario.getId() : null;
-
+        // CORREGIDO: Usar usuarioId directamente
         Page<PostResponse> postResponsePage = postPage.map(post -> convertirAResponse(post, usuarioId));
 
         return new PaginatedResponse<>(postResponsePage);
@@ -320,12 +338,10 @@ public class PostService {
 
     // ========== MÉTODOS AUXILIARES ==========
 
-    // Sobrecarga para mantener compatibilidad
     private PostResponse convertirAResponse(Post post) {
         return convertirAResponse(post, null);
     }
 
-    // Método principal que recibe el ID del usuario actual
     private PostResponse convertirAResponse(Post post, Long usuarioActualId) {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
@@ -353,13 +369,14 @@ public class PostService {
                 ? (long) post.getComentarios().size()
                 : 0L);
 
-        // Verificar si el usuario actual dio like
+        // Verificar si el usuario actual dio like - CORREGIDO: Verificación explícita
+        boolean dioLike = false;
         if (usuarioActualId != null) {
-            boolean dioLike = likeRepository.existsByUsuarioIdAndPostId(usuarioActualId, post.getId());
-            response.setLikedByCurrentUser(dioLike);
-        } else {
-            response.setLikedByCurrentUser(false);
+            dioLike = likeRepository.existsByUsuarioIdAndPostId(usuarioActualId, post.getId());
+            System.out.println("DEBUG - convertirAResponse: usuario=" + usuarioActualId +
+                    " post=" + post.getId() + " dioLike=" + dioLike);
         }
+        response.setLikedByCurrentUser(dioLike);
 
         return response;
     }
