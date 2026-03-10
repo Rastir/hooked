@@ -8,6 +8,7 @@ import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,56 @@ public class PostController {
 
     @Autowired private PostService postService;
 
+    // ========== MÉTODO AUXILIAR PARA EXTRAER USER ID ==========
+
+    /**
+     * Extrae el ID numérico del usuario desde el token JWT.
+     * Busca el claim "userId" primero, luego intenta parsear "sub" si es numérico.
+     * Fallback: busca el usuario en BD por email y devuelve su ID.
+     */
+    private Long extractUserIdFromAuth(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+
+        // Extraer el JWT principal
+        if (auth.getPrincipal() instanceof Jwt) {
+            Jwt jwt = (Jwt) auth.getPrincipal();
+
+            // 1. Intentar obtener userId del claim directamente
+            Object userIdClaim = jwt.getClaim("userId");
+            if (userIdClaim != null) {
+                try {
+                    return Long.valueOf(userIdClaim.toString());
+                } catch (NumberFormatException e) {
+                    // Ignorar y continuar con siguiente opción
+                }
+            }
+
+            // 2. Intentar parsear el subject como Long (por si acaso)
+            String subject = jwt.getSubject();
+            try {
+                return Long.valueOf(subject);
+            } catch (NumberFormatException e) {
+                // El subject es un email, no un ID numérico
+            }
+        }
+
+        // 3. Fallback: si no se puede extraer del token, retornar null
+        // El service deberá manejar este caso buscando por email si es necesario
+        return null;
+    }
+
+    /**
+     * Extrae el email del usuario desde el token JWT.
+     */
+    private String extractEmailFromAuth(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        return auth.getName(); // Esto devuelve el "sub" del JWT (email)
+    }
+
     // ========== CRUD BÁSICO ==========
 
     @PostMapping
@@ -29,7 +80,8 @@ public class PostController {
             @Valid @RequestBody CrearPostRequest request,
             Authentication auth) {
 
-        PostResponse creado = postService.crearPost(request, auth.getName());
+        String email = extractEmailFromAuth(auth);
+        PostResponse creado = postService.crearPost(request, email);
 
         return ResponseEntity.created(URI.create("/api/posts/" + creado.getId()))
                 .headers(createPostHeaders(creado, "created"))
@@ -53,7 +105,8 @@ public class PostController {
             @Valid @RequestBody ActualizarPostRequest request,
             Authentication auth) {
 
-        PostResponse actualizado = postService.actualizarPost(id, request, auth.getName());
+        String email = extractEmailFromAuth(auth);
+        PostResponse actualizado = postService.actualizarPost(id, request, email);
 
         return ResponseEntity.ok()
                 .headers(createPostHeaders(actualizado, "updated"))
@@ -65,7 +118,8 @@ public class PostController {
             @PathVariable @Positive Long id,
             Authentication auth) {
 
-        postService.eliminarPost(id, auth.getName());
+        String email = extractEmailFromAuth(auth);
+        postService.eliminarPost(id, email);
 
         return ResponseEntity.noContent()
                 .header("X-Post-Deleted", "true")
@@ -80,10 +134,13 @@ public class PostController {
             @PathVariable @Positive Long id,
             Authentication auth) {
 
-        // El método toggleLike maneja crear/eliminar automáticamente
-        PostResponse post = postService.toggleLike(id, auth.getName());
+        // Usar ID numérico para likes (más eficiente y preciso)
+        Long userId = extractUserIdFromAuth(auth);
+        String email = extractEmailFromAuth(auth);
 
-        // Determinar qué acción se realizó basado en el estado devuelto
+        // El método toggleLike ahora acepta ambos: userId preferido, email como fallback
+        PostResponse post = postService.toggleLike(id, userId, email);
+
         String action = post.getLikedByCurrentUser() ? "liked" : "unliked";
 
         return ResponseEntity.ok()
@@ -99,7 +156,9 @@ public class PostController {
             @PathVariable @Positive Long id,
             Authentication auth) {
 
-        PostResponse post = postService.quitarLike(id, auth.getName());
+        Long userId = extractUserIdFromAuth(auth);
+        String email = extractEmailFromAuth(auth);
+        PostResponse post = postService.quitarLike(id, userId, email);
 
         return ResponseEntity.ok()
                 .header("X-Unlike-Success", "true")
@@ -132,17 +191,17 @@ public class PostController {
         PaginatedResponse<PostResponse> posts;
         String queryType;
 
-        // Obtener email del usuario autenticado (puede ser null si no está autenticado)
-        String emailUsuario = auth != null ? auth.getName() : null;
+        // CRÍTICO: Usar ID numérico para calcular likedByCurrentUser correctamente
+        Long userId = extractUserIdFromAuth(auth);
 
         if (buscar != null && !buscar.trim().isEmpty()) {
-            posts = postService.buscarPostsPaginados(buscar.trim(), pagina, tamano, emailUsuario);
+            posts = postService.buscarPostsPaginados(buscar.trim(), pagina, tamano, userId);
             queryType = "search";
         } else if (categoriaId != null) {
-            posts = postService.obtenerPostsPorCategoriaPaginados(categoriaId, pagina, tamano, emailUsuario);
+            posts = postService.obtenerPostsPorCategoriaPaginados(categoriaId, pagina, tamano, userId);
             queryType = "category";
         } else {
-            posts = postService.obtenerTodosPostsPaginados(pagina, tamano, emailUsuario);
+            posts = postService.obtenerTodosPostsPaginados(pagina, tamano, userId);
             queryType = "list";
         }
 
@@ -158,10 +217,10 @@ public class PostController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int tamano,
             Authentication auth) {
 
-        String emailUsuario = auth != null ? auth.getName() : null;
+        Long userId = extractUserIdFromAuth(auth);
 
         PaginatedResponse<PostResponse> posts =
-                postService.obtenerPostsPorUsuarioPaginados(usuarioId, pagina, tamano, emailUsuario);
+                postService.obtenerPostsPorUsuarioPaginados(usuarioId, pagina, tamano, userId);
 
         return ResponseEntity.ok()
                 .headers(createPaginationHeaders(posts, "user-posts", pagina))
@@ -170,8 +229,9 @@ public class PostController {
 
     @GetMapping("/mis-posts")
     public ResponseEntity<List<PostResponse>> misPosts(Authentication auth) {
+        String email = extractEmailFromAuth(auth);
         // Tu PostService tiene este método sin paginar
-        List<PostResponse> posts = postService.obtenerPostsPorUsuario(auth.getName());
+        List<PostResponse> posts = postService.obtenerPostsPorUsuario(email);
 
         return ResponseEntity.ok()
                 .header("X-Total-Posts", String.valueOf(posts.size()))
@@ -185,10 +245,10 @@ public class PostController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(50) int tamano,
             Authentication auth) {
 
-        String emailUsuario = auth != null ? auth.getName() : null;
+        Long userId = extractUserIdFromAuth(auth);
 
         PaginatedResponse<PostResponse> posts =
-                postService.obtenerPostsPopularesPaginados(pagina, tamano, emailUsuario);
+                postService.obtenerPostsPopularesPaginados(pagina, tamano, userId);
 
         return ResponseEntity.ok()
                 .headers(createPaginationHeaders(posts, "popular", pagina))
@@ -198,18 +258,18 @@ public class PostController {
 
     // ========== HEADERS REUTILIZABLES ==========
 
-    private HttpHeaders createPostHeaders(PostResponse post, String action) {
+    private HttpHeaders createPostHeaders(PostResponse response, String action) {
         HttpHeaders h = new HttpHeaders();
         h.add("X-Post-" + action, "true");
-        h.add("X-Post-ID", post.getId().toString());
-        h.add("X-Author-ID", post.getAutor().getId().toString());
+        h.add("X-Post-ID", response.getId().toString());
+        h.add("X-Author-ID", response.getAutor().getId().toString());
         h.add("Cache-Control", "no-cache");
         return h;
     }
 
-    private HttpHeaders createReadHeaders(PostResponse post) {
+    private HttpHeaders createReadHeaders(PostResponse response) {
         HttpHeaders h = new HttpHeaders();
-        h.add("X-Post-ID", post.getId().toString());
+        h.add("X-Post-ID", response.getId().toString());
         h.add("Cache-Control", "public, max-age=300");
         return h;
     }
