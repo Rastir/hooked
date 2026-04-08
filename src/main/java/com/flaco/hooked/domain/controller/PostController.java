@@ -3,6 +3,8 @@ package com.flaco.hooked.domain.controller;
 import com.flaco.hooked.domain.request.*;
 import com.flaco.hooked.domain.response.*;
 import com.flaco.hooked.domain.service.PostService;
+import com.flaco.hooked.model.Usuario;
+import com.flaco.hooked.domain.repository.UsuarioRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +25,14 @@ public class PostController {
 
     @Autowired private PostService postService;
 
+    @Autowired private UsuarioRepository usuarioRepository;
+
     // ========== MÉTODO AUXILIAR PARA EXTRAER USER ID ==========
 
     /**
      * Extrae el ID numérico del usuario desde el token JWT.
      * Busca el claim "userId" primero, luego intenta parsear "sub" si es numérico.
-     * Fallback: busca el usuario en BD por email y devuelve su ID.
+     * ✅ CORREGIDO: Fallback a búsqueda por email en BD si no se encuentra en JWT.
      */
     private Long extractUserIdFromAuth(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
@@ -58,8 +62,20 @@ public class PostController {
             }
         }
 
-        // 3. Fallback: si no se puede extraer del token, retornar null
-        // El service deberá manejar este caso buscando por email si es necesario
+        // ✅ CORREGIDO: Fallback - buscar en BD por email
+        String email = extractEmailFromAuth(auth);
+        if (email != null && !email.isEmpty()) {
+            try {
+                Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+                if (usuario != null) {
+                    System.out.println("DEBUG - extractUserIdFromAuth fallback BD: email=" + email + " id=" + usuario.getId());
+                    return usuario.getId();
+                }
+            } catch (Exception e) {
+                System.out.println("DEBUG - Error buscando usuario por email: " + e.getMessage());
+            }
+        }
+
         return null;
     }
 
@@ -138,6 +154,8 @@ public class PostController {
         Long userId = extractUserIdFromAuth(auth);
         String email = extractEmailFromAuth(auth);
 
+        System.out.println("DEBUG - toggleLike controller: userId=" + userId + " email=" + email);
+
         // El método toggleLike ahora acepta ambos: userId preferido, email como fallback
         PostResponse post = postService.toggleLike(id, userId, email);
 
@@ -191,8 +209,10 @@ public class PostController {
         PaginatedResponse<PostResponse> posts;
         String queryType;
 
-        // CRÍTICO: Usar ID numérico para calcular likedByCurrentUser correctamente
+        // ✅ CORREGIDO: Usar ID numérico para calcular likedByCurrentUser correctamente
         Long userId = extractUserIdFromAuth(auth);
+
+        System.out.println("DEBUG - listarPosts: userId extraído=" + userId + " email=" + extractEmailFromAuth(auth));
 
         if (buscar != null && !buscar.trim().isEmpty()) {
             posts = postService.buscarPostsPaginados(buscar.trim(), pagina, tamano, userId);
@@ -270,7 +290,8 @@ public class PostController {
     private HttpHeaders createReadHeaders(PostResponse response) {
         HttpHeaders h = new HttpHeaders();
         h.add("X-Post-ID", response.getId().toString());
-        h.add("Cache-Control", "public, max-age=300");
+        h.add("Cache-Control", "no-cache, no-store, must-revalidate");
+        h.add("Pragma", "no-cache");
         return h;
     }
 

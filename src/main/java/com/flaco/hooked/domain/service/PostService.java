@@ -149,7 +149,7 @@ public class PostService {
     // ========== LIKES CON TOGGLE CORREGIDO ==========
 
     /**
-     * NUEVO: Toggle like usando ID numérico del usuario (más eficiente)
+     * CORREGIDO: Toggle like con sincronización forzada a BD
      */
     public PostResponse toggleLike(Long postId, Long usuarioId, String emailUsuario) {
         Post post = postRepository.findById(postId)
@@ -167,7 +167,11 @@ public class PostService {
             throw new RuntimeException("No se pudo identificar al usuario");
         }
 
+        // ✅ CORREGIDO: Forzar sincronización antes de verificar
+        likeRepository.flush();
+
         boolean yaDioLike = likeRepository.existsByUsuarioIdAndPostId(userIdToUse, postId);
+        System.out.println("DEBUG - toggleLike inicial: usuario=" + userIdToUse + " post=" + postId + " yaDioLike=" + yaDioLike);
 
         if (yaDioLike) {
             // Quitar like
@@ -176,7 +180,6 @@ public class PostService {
         } else {
             // Dar like
             Like like = new Like();
-            // Usar referencias por ID para evitar carga completa de entidades
             Usuario usuarioRef = usuarioRepository.findById(userIdToUse)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
             like.setUsuario(usuarioRef);
@@ -185,20 +188,22 @@ public class PostService {
             System.out.println("DEBUG - Like creado para usuario: " + userIdToUse + " post: " + postId);
         }
 
-        // Forzar flush para asegurar que los cambios se persistan
+        // ✅ CORREGIDO: Forzar flush y limpiar caché de Hibernate
         likeRepository.flush();
 
         // Recalcular contador desde la base de datos
         Long totalLikes = likeRepository.countByPostId(postId);
         post.setLikeCount(totalLikes.intValue());
         postRepository.save(post);
+        postRepository.flush();
 
         System.out.println("DEBUG - Total likes después de toggle: " + totalLikes);
 
-        // Recargar el post para asegurar estado fresco
-        Post postActualizado = postRepository.findById(postId).orElse(post);
+        // ✅ CORREGIDO: Recargar post completamente desde BD (no usar caché)
+        Post postActualizado = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post no encontrado"));
 
-        // Verificar el estado actual del like después de la operación
+        // Verificar estado final
         boolean likeActual = likeRepository.existsByUsuarioIdAndPostId(userIdToUse, postId);
         System.out.println("DEBUG - Estado final del like: " + likeActual);
 
@@ -218,7 +223,7 @@ public class PostService {
     }
 
     /**
-     * NUEVO: Quitar like usando ID numérico del usuario
+     * CORREGIDO: Quitar like con sincronización forzada
      */
     public PostResponse quitarLike(Long postId, Long usuarioId, String emailUsuario) {
         // Si no tenemos el ID, buscar por email (fallback)
@@ -233,7 +238,7 @@ public class PostService {
             throw new RuntimeException("No se pudo identificar al usuario");
         }
 
-        // CORREGIDO: Usar delete directo
+        // ✅ CORREGIDO: Usar delete directo con flush
         likeRepository.deleteByUsuarioIdAndPostId(userIdToUse, postId);
         likeRepository.flush();
 
@@ -243,8 +248,12 @@ public class PostService {
         Long totalLikes = likeRepository.countByPostId(postId);
         post.setLikeCount(totalLikes.intValue());
         postRepository.save(post);
+        postRepository.flush();
 
-        return convertirAResponse(post, userIdToUse);
+        // Recargar post desde BD
+        Post postActualizado = postRepository.findById(postId).orElse(post);
+
+        return convertirAResponse(postActualizado, userIdToUse);
     }
 
     /**
@@ -342,6 +351,9 @@ public class PostService {
         return convertirAResponse(post, null);
     }
 
+    /**
+     * ✅ CORREGIDO: Verificación de like con sincronización forzada
+     */
     private PostResponse convertirAResponse(Post post, Long usuarioActualId) {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
@@ -369,12 +381,18 @@ public class PostService {
                 ? (long) post.getComentarios().size()
                 : 0L);
 
-        // Verificar si el usuario actual dio like - CORREGIDO: Verificación explícita
+        // ✅ CORREGIDO: Verificar like con flush forzado y recarga desde BD
         boolean dioLike = false;
         if (usuarioActualId != null) {
-            dioLike = likeRepository.existsByUsuarioIdAndPostId(usuarioActualId, post.getId());
+            // Forzar sincronización de cualquier operación pendiente
+            likeRepository.flush();
+
+            // Usar count en lugar de exists (más confiable con Hibernate)
+            long likeCount = likeRepository.countByUsuarioIdAndPostId(usuarioActualId, post.getId());
+            dioLike = likeCount > 0;
+
             System.out.println("DEBUG - convertirAResponse: usuario=" + usuarioActualId +
-                    " post=" + post.getId() + " dioLike=" + dioLike);
+                    " post=" + post.getId() + " likeCount=" + likeCount + " dioLike=" + dioLike);
         }
         response.setLikedByCurrentUser(dioLike);
 
