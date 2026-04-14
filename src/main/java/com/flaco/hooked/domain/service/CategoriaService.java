@@ -8,6 +8,11 @@ import com.flaco.hooked.domain.response.CategoriaResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,6 +46,18 @@ public class CategoriaService {
                 .stream()
                 .map(this::convertirACategoriaResponse)
                 .collect(Collectors.toList());
+    }
+
+    //Paginación de categorías
+    @Transactional(readOnly = true)
+    public PaginatedResponse<CategoriaResponse> obtenerCategoriasPaginadas(int pagina, int tamano) {
+
+        // Límite de seguridad: 50
+        tamano = Math.min(tamano, 50);
+        Pageable pageable = PageRequest.of(pagina, tamano, Sort.by("nombre").ascending());
+        Page<Categoria> paginaResult = categoriaRepository.findAll(pageable);
+        Page<CategoriaResponse> paginaResponse = paginaResult.map(this::convertirACategoriaResponse);
+        return new PaginatedResponse<>(paginaResponse);
     }
 
     //Obtener categorias por Id (READ)

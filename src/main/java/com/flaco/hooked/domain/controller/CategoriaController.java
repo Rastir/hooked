@@ -8,6 +8,7 @@ import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.validation.annotation.Validated;
+import com.flaco.hooked.domain.response.PaginatedResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,6 +40,22 @@ public class CategoriaController {
                 .header("X-Total-Categories", String.valueOf(categorias.size()))
                 .header("Cache-Control", "public, max-age=600")
                 .body(categorias);
+    }
+
+    //Paginación de categorías
+    @GetMapping("/paginadas")
+    public ResponseEntity<PaginatedResponse<CategoriaResponse>> listarPaginadas(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "10") int tamano) {
+
+        PaginatedResponse<CategoriaResponse> resultado =
+                categoriaService.obtenerCategoriasPaginadas(pagina, tamano);
+
+        return ResponseEntity.ok()
+                .header("X-Total-Categories", String.valueOf(resultado.getTotalElementos()))
+                .header("X-Total-Pages", String.valueOf(resultado.getTotalPaginas()))
+                .header("X-Current-Page", String.valueOf(resultado.getPaginaActual()))
+                .body(resultado);
     }
 
     @GetMapping("/{id}")
