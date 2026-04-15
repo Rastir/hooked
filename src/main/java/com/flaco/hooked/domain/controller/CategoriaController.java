@@ -42,6 +42,7 @@ public class CategoriaController {
                 .body(categorias);
     }
 
+
     //Paginación de categorías
     @GetMapping("/paginadas")
     public ResponseEntity<PaginatedResponse<CategoriaResponse>> listarPaginadas(
