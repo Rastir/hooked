@@ -255,7 +255,7 @@ public class PostController {
 
         return ResponseEntity.ok()
                 .header("X-Total-Posts", String.valueOf(posts.size()))
-                .header("Cache-Control", "private, max-age=60")
+                .header("Cache-Control", "no-store, no-cache, must-revalidate")
                 .body(posts);
     }
 
@@ -304,7 +304,7 @@ public class PostController {
         h.add("X-Page-Size", String.valueOf(response.getTamanoPagina()));
         h.add("X-Total-Elements", String.valueOf(response.getTotalElementos()));
         h.add("X-Total-Pages", String.valueOf(response.getTotalPaginas()));
-        h.add("Cache-Control", "public, max-age=60");
+        h.add("Cache-Control", "no-store, no-cache, must-revalidate");
         return h;
     }
 }

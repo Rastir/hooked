@@ -240,7 +240,7 @@ public class UsuarioController {
         h.add("X-Profile-Type", type);
         h.add("X-User-ID", u.getId().toString());
         h.add("X-User-Level", u.getNivelPescador() != null ? u.getNivelPescador() : "Principiante");
-        h.add("Cache-Control", "self".equals(type) ? "private, max-age=60" : "public, max-age=300");
+        h.add("Cache-Control", "no-store, no-cache, must-revalidate");
         return h;
     }
 
