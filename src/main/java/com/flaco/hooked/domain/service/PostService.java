@@ -69,10 +69,10 @@ public class PostService {
     }
 
     // Obtener post por ID
-    public PostResponse obtenerPostPorId(Long id) {
+    public PostResponse obtenerPostPorId(Long id, Long usuarioId) {
         Post post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Post no encontrado"));
-        return convertirAResponse(post, null);
+        return convertirAResponse(post, usuarioId);
     }
 
     // Obtener posts por usuario ID

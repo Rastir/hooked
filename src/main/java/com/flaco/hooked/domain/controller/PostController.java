@@ -106,9 +106,11 @@ public class PostController {
 
     @GetMapping("/{id}")
     public ResponseEntity<PostResponse> obtenerPost(
-            @PathVariable @Positive Long id) {
+            @PathVariable @Positive Long id,
+            Authentication auth) {
 
-        PostResponse post = postService.obtenerPostPorId(id);
+        Long userId = extractUserIdFromAuth(auth);
+        PostResponse post = postService.obtenerPostPorId(id, userId);
 
         return ResponseEntity.ok()
                 .headers(createReadHeaders(post))
