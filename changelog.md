@@ -7,6 +7,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-04-22
+
+### Added
+- Campo `racha_actual` (INT DEFAULT 0) en tabla `usuarios` — contador de días consecutivos de login
+- Campo `ultimo_login` (DATETIME NULL) en tabla `usuarios` — registra el último acceso para calcular la racha
+- Migración `V2__add_racha_fields.sql` con los nuevos campos
+- Método `actualizarRacha()` en `AuthController` — calcula automáticamente la racha en cada login:
+  - Mismo día → no cambia
+  - Día siguiente → racha + 1
+  - Más de un día sin login → racha vuelve a 1
+- Campo `rachaActual` expuesto en `UsuarioResponse`
+
 ## [1.1.0] — 2026-04-20
 
 ### Fixed

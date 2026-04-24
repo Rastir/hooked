@@ -59,6 +59,14 @@ public class Usuario implements UserDetails {
     @Column(name = "bio", length = 500)
     private String bio;
 
+    @Column(name = "ultima_actividad")
+    private LocalDateTime ultimaActividad;
+
+    @Column(name = "racha_actual")
+    private Integer rachaActual = 0;
+
+    @Column(name = "ultimo_login")
+    private LocalDateTime ultimoLogin;
     @Column(name = "ubicacion_preferida", length = 100)
     private String ubicacionPreferida;
 
@@ -68,9 +76,6 @@ public class Usuario implements UserDetails {
     // ESTADISTICA
     @Column(name = "fecha_registro")
     private LocalDateTime fechaRegistro;
-
-    @Column(name = "ultima_actividad")
-    private LocalDateTime ultimaActividad;
 
     @Column(name = "nivel_pescador", length = 20)
     private String nivelPescador;
@@ -272,4 +277,9 @@ public class Usuario implements UserDetails {
     public boolean tieneUbicacionPreferida() {
         return ubicacionPreferida != null && !ubicacionPreferida.trim().isEmpty();
     }
+    public Integer getRachaActual() { return rachaActual != null ? rachaActual : 0; }
+    public void setRachaActual(Integer rachaActual) { this.rachaActual = rachaActual; }
+
+    public LocalDateTime getUltimoLogin() { return ultimoLogin; }
+    public void setUltimoLogin(LocalDateTime ultimoLogin) { this.ultimoLogin = ultimoLogin; }
 }

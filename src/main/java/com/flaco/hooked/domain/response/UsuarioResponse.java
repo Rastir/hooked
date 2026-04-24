@@ -22,6 +22,7 @@ public class UsuarioResponse {
 
     private LocalDateTime ultimaActividad;
     private String nivelPescador;
+    private Integer rachaActual;
 
     public UsuarioResponse() {}
 
@@ -49,6 +50,7 @@ public class UsuarioResponse {
                 usuario.getFechaRegistro(), usuario.getFotoPerfil(), usuario.getBio(),
                 usuario.getTags(), usuario.getUbicacionPreferida(), null, null, null,
                 usuario.getUltimaActividad(), usuario.getNivelPescador());
+        this.rachaActual = usuario.getRachaActual();
     }
 
     // Getters y setters (todos igual)
@@ -107,4 +109,6 @@ public class UsuarioResponse {
     public boolean tieneTags() {
         return tags != null && !tags.isEmpty();
     }
+    public Integer getRachaActual() { return rachaActual != null ? rachaActual : 0; }
+    public void setRachaActual(Integer rachaActual) { this.rachaActual = rachaActual; }
 }

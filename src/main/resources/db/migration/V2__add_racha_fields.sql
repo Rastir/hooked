@@ -1,0 +1,3 @@
+ALTER TABLE usuarios
+ADD COLUMN racha_actual INT DEFAULT 0,
+ADD COLUMN ultimo_login DATETIME NULL;

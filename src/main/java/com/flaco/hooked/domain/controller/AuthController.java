@@ -17,6 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @RestController
@@ -28,6 +29,7 @@ public class AuthController {
     @Autowired private JwtService jwtService;
     @Autowired private RefreshTokenService refreshTokenService;
     @Autowired private UtilsService utilsService;
+    @Autowired private com.flaco.hooked.domain.repository.UsuarioRepository usuarioRepository;
 
     @Value("${hooked.jwt.expiration:900000}")
     private long jwtExpirationMs;
@@ -43,6 +45,7 @@ public class AuthController {
         );
 
         Usuario usuario = extractUsuario(auth);
+        actualizarRacha(usuario);
         AuthTokens tokens = generateTokens(usuario, httpRequest);
 
         return buildLoginResponse(tokens, usuario, HttpStatus.OK);
@@ -127,7 +130,34 @@ public class AuthController {
                 .body(sesiones);
     }
 
-    // ========== MÉTODOS PRIVADOS ==========
+    // ========== MÉTODOS PRIVADOS ========== //
+
+    private void actualizarRacha(Usuario usuario) {
+        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ultimoLogin = usuario.getUltimoLogin();
+
+        if (ultimoLogin == null) {
+            // Primer login de su vida
+            usuario.setRachaActual(1);
+        } else {
+            LocalDate hoy = ahora.toLocalDate();
+            LocalDate diaUltimoLogin = ultimoLogin.toLocalDate();
+            long diasDiferencia = java.time.temporal.ChronoUnit.DAYS.between(diaUltimoLogin, hoy);
+
+            if (diasDiferencia == 0) {
+                // Ya hizo login hoy, no cambia nada
+            } else if (diasDiferencia == 1) {
+                // Vino ayer, racha sube
+                usuario.setRachaActual(usuario.getRachaActual() + 1);
+            } else {
+                // Faltó más de un día, racha se rompe
+                usuario.setRachaActual(1);
+            }
+        }
+
+        usuario.setUltimoLogin(ahora);
+        usuarioRepository.save(usuario);
+    }
 
     private Usuario extractUsuario(Authentication authentication) {
         Object principal = authentication.getPrincipal();
