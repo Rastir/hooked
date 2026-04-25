@@ -29,6 +29,7 @@ public class ActualizarPerfilRequest {
     private String nuevaContrasena;
 
     private String contrasenaActual;
+    private String fotoPerfil;
 
     public ActualizarPerfilRequest() {}
 
@@ -84,4 +85,7 @@ public class ActualizarPerfilRequest {
                 ubicacionPreferida != null || tags != null ||
                 nuevaContrasena != null;
     }
+
+    public String getFotoPerfil() { return fotoPerfil; }
+    public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
 }

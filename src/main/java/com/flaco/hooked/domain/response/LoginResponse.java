@@ -9,18 +9,20 @@ public class LoginResponse {
     private Long id;
     private String email;
     private String nombre;
+    private String fotoPerfil;
 
     public LoginResponse() {}
 
     // Constructor completo
     public LoginResponse(String accessToken, String refreshToken, Long expiresIn,
-                         Long id, String email, String nombre) {
+                         Long id, String email, String nombre, String fotoPerfil) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
         this.expiresIn = expiresIn;
         this.id = id;
         this.email = email;
         this.nombre = nombre;
+        this.fotoPerfil = fotoPerfil;
     }
 
     // Getters y setters
@@ -44,6 +46,8 @@ public class LoginResponse {
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getFotoPerfil() { return fotoPerfil; }
+    public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
 
     @Override
     public String toString() {
