@@ -124,6 +124,10 @@ public class UsuarioService {
             usuario.setTags(request.getTags());
         }
 
+        if (request.getFotoPerfil() != null && !request.getFotoPerfil().trim().isEmpty()) {
+            usuario.setFotoPerfil(request.getFotoPerfil().trim());
+        }
+
         // Cambio de contraseña (si se proporciona)
         if (request.esCambioDeContrasena()) {
             cambiarContrasena(usuario, request.getContrasenaActual(), request.getNuevaContrasena());

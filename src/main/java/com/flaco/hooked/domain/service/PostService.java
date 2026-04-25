@@ -368,6 +368,7 @@ public class PostService {
         usuarioResponse.setId(post.getUsuario().getId());
         usuarioResponse.setNombre(post.getUsuario().getNombre());
         usuarioResponse.setEmail(post.getUsuario().getEmail());
+        usuarioResponse.setFotoPerfil(post.getUsuario().getFotoPerfil());
         response.setAutor(usuarioResponse);
 
         // Convertir Categoria

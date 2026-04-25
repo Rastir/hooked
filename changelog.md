@@ -7,6 +7,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-04-25
+
+### Added
+- `fotoPerfil` agregado a `PostResponse.UsuarioResponse` — ahora los posts
+  incluyen la foto de perfil del autor en la respuesta
+- `fotoPerfil` agregado a `LoginResponse` — el frontend puede mostrar la foto
+  del usuario logueado sin hacer una llamada extra al perfil
+- `fotoPerfil` agregado a `ActualizarPerfilRequest` y procesado en
+  `UsuarioService.actualizarPerfil()` — permite actualizar la foto desde
+  el endpoint PUT /api/usuarios/perfil
+
+### Fixed
+- `PostService.convertirAResponse()` ahora incluye `fotoPerfil` del autor
+  al construir el `UsuarioResponse` interno — antes siempre devolvía `null`
+- `PUT /api/usuarios/{id}` no soportado — corregido a `PUT /api/usuarios/perfil`
+  que es el endpoint correcto para actualizar el perfil propio
+
 ## [1.2.0] — 2026-04-22
 
 ### Added

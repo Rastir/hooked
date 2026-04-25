@@ -100,6 +100,7 @@ public class PostResponse {
         private Long id;
         private String nombre;
         private String email;
+        private String fotoPerfil;
 
         public UsuarioResponse() {}
 
@@ -107,6 +108,7 @@ public class PostResponse {
             this.id = usuario.getId();
             this.nombre = usuario.getNombre();
             this.email = usuario.getEmail();
+            this.fotoPerfil = usuario.getFotoPerfil();
         }
 
         public Long getId() { return id; }
@@ -117,6 +119,8 @@ public class PostResponse {
 
         public String getEmail() { return email; }
         public void setEmail(String email) { this.email = email; }
+        public String getFotoPerfil() { return fotoPerfil; }
+        public void setFotoPerfil(String fotoPerfil) { this.fotoPerfil = fotoPerfil; }
     }
 
     public static class CategoriaResponse {

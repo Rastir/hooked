@@ -201,7 +201,8 @@ curl -X POST http://localhost:8080/api/auth/login \
   "expiresIn": 900,
   "id": 1,
   "email": "usuario@ejemplo.com",
-  "nombre": "Juan Pescador"
+  "nombre": "Juan Pescador",
+  "fotoPerfil": "https://res.cloudinary.com/.../foto.jpg"
 }
 ```
  
@@ -300,8 +301,6 @@ Los comentarios soportan 2 niveles de anidación:
 | Método | Endpoint | Descripción | Acceso | Paginado |
 |--------|----------|-------------|--------|----------|
 | GET | `/perfil` | Perfil completo del usuario autenticado | Autenticado | No |
-| PUT | `/perfil` | Actualizar perfil propio | Autenticado | No |
-| POST | `/perfil/foto` | Subir foto de perfil (multipart) | Autenticado | No |
 | GET | `/{id}` | Perfil público de cualquier usuario | Público | No |
 | GET | `/` | Listar usuarios | Público | ✅ Sí |
 | GET | `/?buscar={q}` | Buscar usuarios por nombre/email | Público | ✅ Sí |
@@ -313,6 +312,8 @@ Los comentarios soportan 2 niveles de anidación:
 | GET | `/nuevos?dias={n}` | Usuarios registrados recientemente | Público | ✅ Sí |
 | GET | `/buscar-avanzado?q={termino}` | Búsqueda multicampo (nombre, email, ubicación, tags) | Público | ✅ Sí |
 | GET | `/stats` | Estadísticas totales de usuarios | Público | No |
+| PUT | `/perfil` | Actualizar perfil propio | Autenticado | No |
+| POST | `/perfil/foto` | Subir foto de perfil (multipart) | Autenticado | No |
 
 **Niveles de Pescador (auto-calculado):**
 
@@ -458,6 +459,8 @@ docker run -p 8080:8080 \
 | Migraciones Flyway | ✅ Configurado | Listo para usar (ubicación: `db/migration`) |
 | Documentación API | ✅ Completo | Swagger UI en `/swagger-ui.html` |
 | Paginación de Categorías | ✅ Completo | `GET /api/categorias/paginadas?pagina=0&tamano=10`. Máx. 50 elementos, ordenado por nombre A-Z |
+| Sistema de racha | ✅ Completo | Calculada en login, campos en BD via Flyway V2 |
+| Badges de usuario | 🚧 Estructura lista | Espacio en frontend, lógica pendiente |
 
 ### Features en Desarrollo 🚧
 
@@ -512,3 +515,13 @@ curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","contrasena":"password123"}'
 ```
+ 
+---
+
+## 📈 Próximos Pasos Sugeridos
+
+1. **Inmediato:** Implementar paginación en `CategoriaController` y `CategoriaService`
+2. **Corto plazo:** Agregar suite de tests unitarios (JUnit + Mockito)
+3. **Mediano plazo:** Tests de integración con `@SpringBootTest`
+4. **Largo plazo:** Frontend vanilla o evaluar framework (React/Vue)
+ 

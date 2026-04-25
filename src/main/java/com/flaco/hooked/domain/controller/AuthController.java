@@ -199,7 +199,8 @@ public class AuthController {
                 jwtExpirationMs / 1000,
                 usuario.getId(),
                 usuario.getEmail(),
-                usuario.getNombre()
+                usuario.getNombre(),
+                usuario.getFotoPerfil()
         );
     }
 
