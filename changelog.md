@@ -7,6 +7,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-05-09
+
+### Added
+- Entidad `Seguidor` — modelo JPA con relación many-to-one doble a `Usuario`
+- `SeguidorRepository` — métodos para follow/unfollow, contadores y detección
+  de mutualidad (`esFishingBuddy`)
+- `SeguidorService` — lógica de seguir, dejar de seguir, listar seguidores y
+  siguiendo, contadores y estado de Fishing Buddy
+- `SeguidorController` — endpoints REST bajo `/api/usuarios/{id}/`:
+  `POST /seguir`, `DELETE /seguir`, `GET /seguidores`, `GET /siguiendo`,
+  `GET /es-seguidor`
+- `SeguidorResponse` DTO con campos `id`, `nombre`, `fotoPerfil`,
+  `nivelPescador`, `esFishingBuddy`, `yoLoSigo`
+- Migración `V3__add_seguidores.sql` — tabla `seguidores` con índices y
+  foreign keys con CASCADE
+- Endpoints de listas públicas registrados en `SecurityConfig`
+
 ## [1.3.0] — 2026-04-25
 
 ### Added

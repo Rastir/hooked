@@ -84,6 +84,10 @@ public class SecurityConfig {
                         // Usuarios - lectura pública
                         .requestMatchers(HttpMethod.GET, "/api/usuarios", "/api/usuarios/**").permitAll()
 
+                        // Followers - lectura pública
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/*/seguidores").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/*/siguiendo").permitAll()
+
                         // Likes - requiere auth
                         .requestMatchers("/api/likes/**").authenticated()
 
