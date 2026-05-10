@@ -384,10 +384,10 @@ spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 ```properties
 # Access token: 15 minutos
 hooked.jwt.expiration=900000
- 
+
 # Refresh token: 30 días
 hooked.jwt.refresh-expiration-seconds=2592000
- 
+
 # Secret (cambiar en producción!)
 api.security.token.secret=${JWT_SECRET:hooked-2025-change-in-production}
 ```
@@ -397,7 +397,7 @@ api.security.token.secret=${JWT_SECRET:hooked-2025-change-in-production}
 ```properties
 # Múltiples orígenes separados por coma
 cors.allowed-origins=https://tufrontend.com,https://app.hooked.com
- 
+
 # O wildcard para desarrollo (no recomendado en prod)
 cors.allowed-origins=*
 ```
@@ -461,6 +461,7 @@ docker run -p 8080:8080 \
 | Paginación de Categorías | ✅ Completo | `GET /api/categorias/paginadas?pagina=0&tamano=10`. Máx. 50 elementos, ordenado por nombre A-Z |
 | Sistema de racha | ✅ Completo | Calculada en login, campos en BD via Flyway V2 |
 | Badges de usuario | 🚧 Estructura lista | Espacio en frontend, lógica pendiente |
+| Sistema de Follows | ✅ Completo | Follow simple + detección Fishing Buddy mutuo |
 
 ### Features en Desarrollo 🚧
 
